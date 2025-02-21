@@ -25,6 +25,9 @@ RUN npm ci --include=dev
 
 USER node
 
+# Initialize husky only in dev
+RUN npx husky install
+
 # Copy the rest of the source code for the dev environment
 COPY . .
 
