@@ -15,19 +15,19 @@ const mockRepository = {
 jest.mock("../../controllers/user", () => ({
   userController: jest.fn().mockImplementation(() => ({
     getUser: jest.fn((req, res) =>
-      res.status(200).json({ message: "Get all users" })
+      res.status(200).json({ message: "Get all users" }),
     ),
     getUserById: jest.fn((req, res) =>
-      res.status(200).json({ message: "Get user by ID" })
+      res.status(200).json({ message: "Get user by ID" }),
     ),
     createUser: jest.fn((req, res) =>
-      res.status(201).json({ message: "User created" })
+      res.status(201).json({ message: "User created" }),
     ),
     updateUser: jest.fn((req, res) =>
-      res.status(200).json({ message: "User updated" })
+      res.status(200).json({ message: "User updated" }),
     ),
     deleteUser: jest.fn((req, res) =>
-      res.status(200).json({ message: "User deleted" })
+      res.status(200).json({ message: "User deleted" }),
     ),
   })),
 }));
