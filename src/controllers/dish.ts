@@ -61,16 +61,16 @@ export const dishController = ({
         const user = await userRepository.findOne({ where: { id: userId } });
 
         if (!user) {
-          return res
-            .status(STATUS_CODES.NOT_FOUND)
-            .send(USER_MESSAGES.USER_NOT_FOUND);
+          return res.status(STATUS_CODES.NOT_FOUND).send({
+            message: USER_MESSAGES.USER_NOT_FOUND,
+          });
         }
 
         // Optional: Check if the user is an admin
         if (user.role !== UserRole.admin) {
           return res
             .status(STATUS_CODES.FORBIDDEN)
-            .send(DISH_MESSAGES.ADMIN_ONLY);
+            .json({ message: USER_MESSAGES.ADMIN_ONLY });
         }
 
         const dish = dishRepository.create({
@@ -86,12 +86,12 @@ export const dishController = ({
 
         const results = await dishRepository.save(dish);
 
-        res.status(STATUS_CODES.NO_CONTENT).send(results);
+        res.status(STATUS_CODES.NO_CONTENT).json(results);
       } catch (error) {
         console.error("Error creating dish:", error);
         res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .send(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR);
+          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -118,16 +118,16 @@ export const dishController = ({
         if (!dish) {
           return res
             .status(STATUS_CODES.NOT_FOUND)
-            .send(DISH_MESSAGES.DISH_NOT_FOUND);
+            .json({ message: DISH_MESSAGES.DISH_NOT_FOUND });
         }
 
-        res.send(dish);
+        res.json(dish);
       } catch (error) {
         console.error("Error fetching dish with id ${req.params.id}:", error);
 
         res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .send(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR);
+          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
       }
     },
 
@@ -155,19 +155,19 @@ export const dishController = ({
         if (!dish) {
           return res
             .status(STATUS_CODES.NOT_FOUND)
-            .send(DISH_MESSAGES.DISH_NOT_FOUND);
+            .json({ message: DISH_MESSAGES.DISH_NOT_FOUND });
         }
 
         const updatedDish = dishRepository.merge(dish, req.body);
         const results = await dishRepository.save(updatedDish);
 
-        res.send(results);
+        res.json(results);
       } catch (error) {
         console.error("Error updating dish with id ${req.params.id}:", error);
 
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .send(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR);
+        res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+          message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
+        });
       }
     },
 
@@ -193,16 +193,16 @@ export const dishController = ({
         if (results.affected === 0) {
           return res
             .status(STATUS_CODES.NOT_FOUND)
-            .send(DISH_MESSAGES.DISH_NOT_FOUND);
+            .json({ message: DISH_MESSAGES.DISH_NOT_FOUND });
         }
 
         res.send(results);
       } catch (error) {
         console.error("Error deleting dish with id ${req.params.id}:", error);
 
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .send(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR);
+        res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+          message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
+        });
       }
     },
 
@@ -252,7 +252,7 @@ export const dishController = ({
 
         const totalPages = Math.ceil(total / limitParam);
 
-        res.send({
+        res.json({
           data: dishes,
           pagination: {
             page: pageParam,
@@ -263,9 +263,9 @@ export const dishController = ({
         });
       } catch (error) {
         console.error("Error fetching dishes:", error);
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .send(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR);
+        res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+          message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
+        });
       }
     },
   };
