@@ -61,7 +61,7 @@ export const dishController = ({
         const user = await userRepository.findOne({ where: { id: userId } });
 
         if (!user) {
-          return res.status(STATUS_CODES.NOT_FOUND).send({
+          return res.status(STATUS_CODES.NOT_FOUND).json({
             message: USER_MESSAGES.USER_NOT_FOUND,
           });
         }
@@ -121,7 +121,7 @@ export const dishController = ({
             .json({ message: DISH_MESSAGES.DISH_NOT_FOUND });
         }
 
-        res.json(dish);
+        res.status(STATUS_CODES.OK).json(dish);
       } catch (error) {
         console.error("Error fetching dish with id ${req.params.id}:", error);
 
@@ -147,8 +147,25 @@ export const dishController = ({
      * */
     updateDishByID: async (req: Request, res: Response) => {
       const id = req.params.id;
+      const userId = req.body.userId;
 
       try {
+        // Find the user who is creating the dish (admin check)
+        const user = await userRepository.findOne({ where: { id: userId } });
+
+        if (!user) {
+          return res.status(STATUS_CODES.NOT_FOUND).json({
+            message: USER_MESSAGES.USER_NOT_FOUND,
+          });
+        }
+
+        // Optional: Check if the user is an admin
+        if (user.role !== UserRole.admin) {
+          return res
+            .status(STATUS_CODES.FORBIDDEN)
+            .json({ message: USER_MESSAGES.ADMIN_ONLY });
+        }
+
         const dish = await dishRepository.findOneBy({ id });
 
         // Check if the dish exists
@@ -161,7 +178,7 @@ export const dishController = ({
         const updatedDish = dishRepository.merge(dish, req.body);
         const results = await dishRepository.save(updatedDish);
 
-        res.json(results);
+        res.status(STATUS_CODES.OK).json(results);
       } catch (error) {
         console.error("Error updating dish with id ${req.params.id}:", error);
 
@@ -186,8 +203,25 @@ export const dishController = ({
      */
     deleteDishByID: async (req: Request, res: Response) => {
       const id = req.params.id;
+      const userId = req.body.userId;
 
       try {
+        // Find the user who is creating the dish (admin check)
+        const user = await userRepository.findOne({ where: { id: userId } });
+
+        if (!user) {
+          return res.status(STATUS_CODES.NOT_FOUND).json({
+            message: USER_MESSAGES.USER_NOT_FOUND,
+          });
+        }
+
+        // Optional: Check if the user is an admin
+        if (user.role !== UserRole.admin) {
+          return res
+            .status(STATUS_CODES.FORBIDDEN)
+            .json({ message: USER_MESSAGES.ADMIN_ONLY });
+        }
+
         const results = await dishRepository.delete(id);
 
         if (results.affected === 0) {
@@ -196,7 +230,9 @@ export const dishController = ({
             .json({ message: DISH_MESSAGES.DISH_NOT_FOUND });
         }
 
-        res.send(results);
+        res
+          .status(STATUS_CODES.OK)
+          .json({ message: DISH_MESSAGES.DISH_DELETED });
       } catch (error) {
         console.error("Error deleting dish with id ${req.params.id}:", error);
 
@@ -227,7 +263,7 @@ export const dishController = ({
       if (!Object.values(DishCategory).includes(categoryParam)) {
         return res
           .status(STATUS_CODES.BAD_REQUEST)
-          .json({ message: "Invalid category" });
+          .json({ message: DISH_MESSAGES.INVALID_CATEGORY });
       }
 
       const pageParam = parseInt(page as string);
@@ -237,7 +273,7 @@ export const dishController = ({
       if ((page && limit && pageParam <= 0) || limitParam <= 0) {
         return res
           .status(STATUS_CODES.BAD_REQUEST)
-          .json({ message: "Invalid page or limit" });
+          .json({ message: DISH_MESSAGES.INVALID_PAGE_AND_LIMIT });
       }
 
       const skip = (pageParam - 1) * limitParam;
@@ -252,7 +288,7 @@ export const dishController = ({
 
         const totalPages = Math.ceil(total / limitParam);
 
-        res.json({
+        res.status(STATUS_CODES.OK).json({
           data: dishes,
           pagination: {
             page: pageParam,
