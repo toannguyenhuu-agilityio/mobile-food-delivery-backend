@@ -299,10 +299,10 @@ export const cartController = ({
         });
 
         // Apply the discount (subtract from total price)
-        const discountedPrice = totalItemsPrice - cart.discount_amount;
+        const discountedPrice = totalItemsPrice - cart.discountAmount;
 
         // Apply VAT (calculate VAT based on the discounted price)
-        const vatAmount = (discountedPrice * cart.vat_percentage) / 100;
+        const vatAmount = (discountedPrice * cart.vatPercentage) / 100;
         const finalTotalPrice = discountedPrice + vatAmount;
 
         // Update the total price of the cart
