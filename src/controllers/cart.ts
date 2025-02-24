@@ -30,6 +30,12 @@ export const cartController = ({
   return {
     /**
      * Creates a new cart for the user.
+     * @param {Object} req - The request object containing the user ID.
+     * @param {Object} res - The response object used to send the response.
+     * 
+     * @returns {Promise<void>} - A promise that resolves when the cart is successfully created.
+     * @throws {Error} - Throws an error if an unexpected issue occurs while creating the cart.
+    
      */
     createCart: async (req: Request, res: Response) => {
       const { userId } = req.body;
@@ -71,6 +77,12 @@ export const cartController = ({
 
     /**
      * Retrieves the active cart details for the user. Only one active cart is operated at a time.
+     * @param {Object} req - The request object containing the user ID.
+     * @param {Object} res - The response object used to send the response.
+     *
+     * @returns {Promise<void>} - A promise that resolves when the cart details are successfully retrieved.
+     * @throws {Error} - Throws an error if an unexpected issue occurs while retrieving the cart details.
+     *
      */
     getCartDetail: async (req: Request, res: Response) => {
       const { userId } = req.params;
@@ -98,6 +110,11 @@ export const cartController = ({
 
     /**
      * Adds an item to the user's cart.
+     * @param {Object} req - The request object containing the cart id, dish id and quantity.
+     * @param {Object} res - The response object used to send the response.
+     *
+     * @returns {Promise<void>} - A promise that resolves when the item is successfully added to the cart.
+     * @throws {Error} - Throws an error if an unexpected issue occurs while adding the item to the cart.
      */
     addItemToCart: async (req: Request, res: Response) => {
       const { cartId } = req.params;
@@ -149,6 +166,11 @@ export const cartController = ({
 
     /**
      * Updates the quantity or price of an item in the user's cart.
+     * @param {Object} req - The request object containing the cart id and item id.
+     * @param {Object} res - The response object used to send the response.
+     *
+     * @returns {Promise<void>} - A promise that resolves when the item is successfully updated in the cart.
+     * @throws {Error} - Throws an error if an unexpected issue occurs while updating the item in the cart.
      */
     updateItemInCart: async (req: Request, res: Response) => {
       const { cartId, itemId } = req.params;
@@ -196,6 +218,12 @@ export const cartController = ({
 
     /**
      * Removes an item from the user's cart.
+     * @param {Object} req - The request object containing the cart id and item id.
+     * @param {Object} res - The response object used to send the response.
+     *
+     * @returns {Promise<void>} - A promise that resolves when the item is successfully removed from the cart.
+     * @throws {Error} - Throws an error if an unexpected issue occurs while removing the item from the cart.
+     *
      */
     removeItemFromCart: async (req: Request, res: Response) => {
       const { cartId, itemId } = req.params;
@@ -243,6 +271,11 @@ export const cartController = ({
 
     /**
      * Completes the checkout process for the user's cart.
+     * @param {Object} req - The request object containing the user ID.
+     * @param {Object} res - The response object used to send the response.
+     *
+     * @returns {Promise<void>} - A promise that resolves when the checkout process is completed.
+     * @throws {Error} - Throws an error if an unexpected issue occurs while completing the checkout process.
      */
     checkoutCart: async (req: Request, res: Response) => {
       const { userId } = req.body;
