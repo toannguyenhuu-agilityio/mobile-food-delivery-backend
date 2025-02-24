@@ -4,6 +4,8 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 
 // Entities
@@ -22,10 +24,10 @@ export class Cart {
   status: CartStatus; // Active, Completed, etc.
 
   @Column("decimal", { default: 0 })
-  discount_amount: number;
+  discountAmount: number;
 
   @Column("decimal", { default: 0 })
-  vat_percentage: number;
+  vatPercentage: number;
 
   @Column("decimal", { default: 0 })
   totalPrice: number;
@@ -35,4 +37,10 @@ export class Cart {
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.cart)
   cartItems: CartItem[];
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
