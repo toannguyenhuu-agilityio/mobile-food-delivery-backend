@@ -13,7 +13,7 @@ import { User } from "./user.ts";
 import { CartItem } from "./cartItem.ts";
 
 // Types
-import { CartStatus } from "../types/cart.ts"; // Assuming CartStatus is a type you've defined elsewhere
+import { CartStatus } from "../types/cart.ts";
 
 @Entity()
 export class Cart {
@@ -21,7 +21,7 @@ export class Cart {
   id: string;
 
   @Column({ type: "enum", enum: CartStatus, default: CartStatus.Active })
-  status: CartStatus; // Active, Completed, etc.
+  status: CartStatus;
 
   @Column("decimal", { default: 0 })
   discountAmount: number;

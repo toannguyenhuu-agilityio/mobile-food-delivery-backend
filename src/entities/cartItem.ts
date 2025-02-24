@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from "typeorm";
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
 // Entities
 import { Cart } from "./cart.ts";
@@ -23,4 +30,10 @@ export class CartItem {
 
   @ManyToOne(() => Cart, (cart) => cart.cartItems, { nullable: false })
   cart: Cart;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
