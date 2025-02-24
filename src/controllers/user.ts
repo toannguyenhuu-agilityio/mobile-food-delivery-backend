@@ -14,7 +14,7 @@ export const userController = (userRepository: Repository<User>) => {
         const users = await userRepository.find();
         res.json(users);
       } catch (error) {
-        console.error("Error fetching users:", error);
+        console.log("Error fetching users:", error);
         res.status(500).send("Internal server error");
       }
     },
@@ -30,7 +30,7 @@ export const userController = (userRepository: Repository<User>) => {
 
         res.send(user);
       } catch (error) {
-        console.error("Error fetching user with id ${req.params.id}:", error);
+        console.log("Error fetching user with id ${req.params.id}:", error);
         res.status(500).send("Internal server error");
       }
     },
@@ -81,7 +81,7 @@ export const userController = (userRepository: Repository<User>) => {
 
         res.status(STATUS_CODES.NO_CONTENT).send(results);
       } catch (error) {
-        console.error("Error creating user:", error);
+        console.log("Error creating user:", error);
         res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
           .send(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR);
@@ -104,7 +104,7 @@ export const userController = (userRepository: Repository<User>) => {
 
         res.send(results);
       } catch (error) {
-        console.error("Error updating user with id ${req.params.id}:", error);
+        console.log("Error updating user with id ${req.params.id}:", error);
         res.status(500).send("Internal server error");
       }
     },
@@ -119,7 +119,7 @@ export const userController = (userRepository: Repository<User>) => {
 
         res.send(results);
       } catch (error) {
-        console.error("Error deleting user with id ${req.params.id}:", error);
+        console.log("Error deleting user with id ${req.params.id}:", error);
         res.status(500).send("Internal server error");
       }
     },

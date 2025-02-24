@@ -88,7 +88,7 @@ export const dishController = ({
 
         res.status(STATUS_CODES.NO_CONTENT).json(results);
       } catch (error) {
-        console.error("Error creating dish:", error);
+        console.log("Error creating dish:", error);
         res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
           .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
@@ -123,7 +123,7 @@ export const dishController = ({
 
         res.status(STATUS_CODES.OK).json(dish);
       } catch (error) {
-        console.error("Error fetching dish with id ${req.params.id}:", error);
+        console.log("Error fetching dish with id ${req.params.id}:", error);
 
         res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
@@ -180,7 +180,7 @@ export const dishController = ({
 
         res.status(STATUS_CODES.OK).json(results);
       } catch (error) {
-        console.error("Error updating dish with id ${req.params.id}:", error);
+        console.log("Error updating dish with id ${req.params.id}:", error);
 
         res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
           message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
@@ -234,7 +234,7 @@ export const dishController = ({
           .status(STATUS_CODES.OK)
           .json({ message: DISH_MESSAGES.DISH_DELETED });
       } catch (error) {
-        console.error("Error deleting dish with id ${req.params.id}:", error);
+        console.log("Error deleting dish with id ${req.params.id}:", error);
 
         res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
           message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
@@ -298,7 +298,7 @@ export const dishController = ({
           },
         });
       } catch (error) {
-        console.error("Error fetching dishes:", error);
+        console.log("Error fetching dishes:", error);
         res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
           message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
         });
