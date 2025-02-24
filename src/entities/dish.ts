@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from "typeorm";
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
 // Entities
 import { User } from "./user.ts";
@@ -34,4 +41,10 @@ export class Dish {
 
   @ManyToOne(() => User, (user) => user.dish, { nullable: false })
   user: User;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
