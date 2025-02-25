@@ -282,6 +282,7 @@ describe("Dish Controller", () => {
         role: UserRole.admin,
         dishes: [],
         carts: [],
+        orders: [],
       });
       mockDishRepository.findOneBy.mockResolvedValue(null);
 
@@ -398,6 +399,7 @@ describe("Dish Controller", () => {
         role: UserRole.admin,
         dishes: [],
         carts: [],
+        orders: [],
       });
       mockDishRepository.delete.mockResolvedValue({
         affected: 0,

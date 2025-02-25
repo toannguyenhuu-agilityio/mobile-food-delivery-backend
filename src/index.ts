@@ -8,11 +8,14 @@ import { User } from "./entities/user.ts";
 import { Dish } from "./entities/dish.ts";
 import { CartItem } from "./entities/cartItem.ts";
 import { Cart } from "./entities/cart.ts";
+import { Order } from "./entities/order.ts";
+import { OrderItem } from "./entities/orderItem.ts";
 
 // Routes
 import { userRoutes } from "./routes/user.ts";
 import { dishRoutes } from "./routes/dish.ts";
 import { cartRoutes } from "./routes/cart.ts";
+import { orderRoutes } from "./routes/order.ts";
 
 dotenv.config();
 
@@ -29,6 +32,8 @@ AppDataSource.initialize()
     const dishRepository = AppDataSource.getRepository(Dish);
     const cartItemRepository = AppDataSource.getRepository(CartItem);
     const cartRepository = AppDataSource.getRepository(Cart);
+    const orderRepository = AppDataSource.getRepository(Order);
+    const orderItemRepository = AppDataSource.getRepository(OrderItem);
 
     // routes
     userRoutes({ app, repository: userRepository });
@@ -39,6 +44,13 @@ AppDataSource.initialize()
       cartRepository,
       cartItemRepository,
       dishRepository,
+    });
+
+    orderRoutes({
+      app,
+      dataSource: AppDataSource,
+      orderRepository,
+      orderItemRepository,
     });
 
     // start express server
