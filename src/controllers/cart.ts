@@ -278,7 +278,7 @@ export const cartController = ({
      * @throws {Error} - Throws an error if an unexpected issue occurs while completing the checkout process.
      */
     checkoutCart: async (req: Request, res: Response) => {
-      const { userId } = req.body;
+      const { userId, vat, discount } = req.body;
 
       try {
         const cart = await cartRepository.findOne({
@@ -299,14 +299,16 @@ export const cartController = ({
         });
 
         // Apply the discount (subtract from total price)
-        const discountedPrice = totalItemsPrice - cart.discountAmount;
+        const discountedPrice = totalItemsPrice - discount;
 
         // Apply VAT (calculate VAT based on the discounted price)
-        const vatAmount = (discountedPrice * cart.vatPercentage) / 100;
+        const vatAmount = (discountedPrice * vat) / 100;
         const finalTotalPrice = discountedPrice + vatAmount;
 
         // Update the total price of the cart
         cart.totalPrice = finalTotalPrice;
+        cart.vatPercentage = vat;
+        cart.discountAmount = discount;
 
         // Mark the cart as completed (order placed)
         cart.status = CartStatus.Completed;
