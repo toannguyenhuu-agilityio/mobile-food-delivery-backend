@@ -41,11 +41,7 @@ export const ORDER_MESSAGES = {
   ORDER_CREATED: "Order created successfully",
   ORDER_UPDATED: "Order updated successfully",
   ORDER_DELETED: "Order deleted successfully",
-  ORDER_ITEM_NOT_FOUND: "Order item not found",
-  ORDER_ITEM_UPDATED: "Order item updated successfully",
-  ORDER_ITEM_DELETED: "Order item deleted successfully",
-  ORDER_ITEM_ADDED: "Order item added successfully",
-  ORDER_ITEM_REMOVED: "Order item removed successfully",
   ORDER_STATUS_UPDATED: "Order status updated successfully",
-  ORDER_STATUS_NOT_FOUND: "Order status not found",
+  INVALID_ORDER_STATUS: "Invalid order status",
+  INVALID_PAGE_AND_LIMIT: "Invalid page or limit",
 };

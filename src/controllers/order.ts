@@ -82,7 +82,7 @@ export const orderController = ({
         });
 
         //  Save the Order
-        await queryRunner.manager.save(newOrder);
+        await queryRunner.manager.save(Order, newOrder);
 
         //  Create the Order Items
         const orderItems = [];
@@ -110,7 +110,7 @@ export const orderController = ({
 
         res.status(STATUS_CODES.CREATED).json(newOrder);
       } catch (error) {
-        console.error("Error creating order:", error);
+        console.log("Error creating order:", error);
 
         // Rollback the transaction in case of an error
         await queryRunner.rollbackTransaction();
@@ -148,7 +148,7 @@ export const orderController = ({
 
         return res.status(STATUS_CODES.OK).json(order);
       } catch (error) {
-        console.error("Error retrieving order:", error);
+        console.log("Error retrieving order:", error);
 
         return res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
@@ -165,16 +165,56 @@ export const orderController = ({
      * @throws {Error} - Throws an error if an unexpected issue occurs while retrieving the orders.
      */
     getOrders: async (req: Request, res: Response) => {
+      const { status, page, limit } = req.query;
+      const statusQuery = (status as OrderStatus) || OrderStatus.Pending;
+
+      if (!Object.values(OrderStatus).includes(statusQuery)) {
+        return res
+          .status(STATUS_CODES.BAD_REQUEST)
+          .json({ message: ORDER_MESSAGES.INVALID_ORDER_STATUS });
+      }
+
+      const pageQuery = parseInt(page as string);
+      const limitQuery = parseInt(limit as string);
+
+      // Ensure page and limit are valid
+      if ((page && limit && pageQuery <= 0) || limitQuery <= 0) {
+        return res
+          .status(STATUS_CODES.BAD_REQUEST)
+          .json({ message: ORDER_MESSAGES.INVALID_PAGE_AND_LIMIT });
+      }
+
+      const skip = (pageQuery - 1) * limitQuery;
+
       try {
         const { userId } = req.params;
-        const orders = await orderRepository.find({
-          where: { user: { id: userId } },
+        const [orders, total = 0] = await orderRepository.findAndCount({
+          where: { user: { id: userId }, status: statusQuery },
           relations: ["orderItems", "orderItems.dish"],
-        }); // Include orderItems and their associated dish entities
+          skip,
+          take: limitQuery,
+        });
 
-        return res.status(STATUS_CODES.OK).json(orders);
+        // Check if no orders found
+        if (!orders || orders.length === 0) {
+          return res
+            .status(STATUS_CODES.NOT_FOUND)
+            .json({ message: ORDER_MESSAGES.ORDER_NOT_FOUND });
+        }
+
+        const totalPages = Math.ceil(total / limitQuery);
+
+        return res.status(STATUS_CODES.OK).json({
+          data: orders,
+          pagination: {
+            page: pageQuery,
+            limit: limitQuery,
+            totalItems: total,
+            totalPages,
+          },
+        });
       } catch (error) {
-        console.error("Error retrieving orders:", error);
+        console.log("Error retrieving orders:", error);
 
         return res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
@@ -213,7 +253,7 @@ export const orderController = ({
           .status(STATUS_CODES.OK)
           .json({ message: ORDER_MESSAGES.ORDER_STATUS_UPDATED });
       } catch (error) {
-        console.error("Error updating order status:", error);
+        console.log("Error updating order status:", error);
 
         return res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)

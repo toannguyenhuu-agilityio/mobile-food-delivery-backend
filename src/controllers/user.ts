@@ -67,7 +67,7 @@ export const userController = (userRepository: Repository<User>) => {
           });
           const savedUser = await userRepository.save(user);
 
-          return res.status(STATUS_CODES.NO_CONTENT).send(savedUser);
+          return res.status(STATUS_CODES.CREATED).send(savedUser);
         }
 
         const user = userRepository.create({
@@ -79,7 +79,7 @@ export const userController = (userRepository: Repository<User>) => {
 
         const results = await userRepository.save(user);
 
-        res.status(STATUS_CODES.NO_CONTENT).send(results);
+        res.status(STATUS_CODES.CREATED).send(results);
       } catch (error) {
         console.log("Error creating user:", error);
         res

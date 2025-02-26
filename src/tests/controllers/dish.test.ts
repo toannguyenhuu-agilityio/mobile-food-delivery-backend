@@ -139,7 +139,7 @@ describe("Dish Controller", () => {
         userRepository: mockUserRepository,
       }).createDish(mockReq, res);
 
-      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NO_CONTENT);
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.CREATED);
       expect(res.json).toHaveBeenCalledWith(DISH);
     });
 

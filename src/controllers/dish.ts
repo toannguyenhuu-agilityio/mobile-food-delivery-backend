@@ -86,7 +86,7 @@ export const dishController = ({
 
         const results = await dishRepository.save(dish);
 
-        res.status(STATUS_CODES.NO_CONTENT).json(results);
+        res.status(STATUS_CODES.CREATED).json(results);
       } catch (error) {
         console.log("Error creating dish:", error);
         res
