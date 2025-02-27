@@ -34,6 +34,10 @@ jest.mock("../../controllers/dish.ts", () => ({
   dishController: jest.fn(),
 }));
 
+jest.mock("../../middleware/auth0.middleware", () => ({
+  validateToken: jest.fn((req, res, next) => next()),
+}));
+
 describe("Dish Routes", () => {
   let app: express.Application;
   const mockCreateDish = jest.fn();

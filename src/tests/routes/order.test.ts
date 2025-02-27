@@ -39,6 +39,10 @@ jest.mock("../../controllers/order", () => ({
   orderController: jest.fn(),
 }));
 
+jest.mock("../../middleware/auth0.middleware", () => ({
+  validateToken: jest.fn((req, res, next) => next()),
+}));
+
 describe("Order Routes", () => {
   let app: express.Application;
   const mockGetOrderById = jest.fn();

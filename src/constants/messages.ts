@@ -45,3 +45,17 @@ export const ORDER_MESSAGES = {
   INVALID_ORDER_STATUS: "Invalid order status",
   INVALID_PAGE_AND_LIMIT: "Invalid page or limit",
 };
+
+export const AUTH_MESSAGES = {
+  INVALID_TOKEN: "Invalid token",
+  TOKEN_EXPIRED: "Token expired",
+  INVALID_CREDENTIALS: "Invalid credentials",
+  USER_NOT_FOUND: "User not found",
+  USER_ALREADY_EXISTS: "User already exists",
+  USER_CREATED: "User created successfully",
+  USER_UPDATED: "User updated successfully",
+  UNAUTHORIZED_ACCESS: "Unauthorized Access",
+  MISSING_REQUIRED_FIELDS: "Missing required fields",
+  SIGNUP_SUCCESS: "Sign up successful",
+  SIGNUP_FAILED: "Sign up failed",
+};

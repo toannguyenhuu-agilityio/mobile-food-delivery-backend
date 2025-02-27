@@ -1,5 +1,8 @@
 import { dishController } from "../controllers/dish.ts";
 
+// Middlewares
+import { validateToken } from "../middleware/auth0.middleware.ts";
+
 export const dishRoutes = ({
   app,
   dishRepository,
@@ -12,12 +15,13 @@ export const dishRoutes = ({
       dishRepository,
     });
 
-  app.route("/dish").post(createDish);
+  app.route("/dish").post(validateToken, createDish);
 
-  app.route("/dishes").get(getDishes);
+  app.route("/dishes").get(validateToken, getDishes);
 
   app
     .route("/dish/:id")
+    .all(validateToken)
     .get(getDishByID)
     .delete(deleteDishByID)
     .put(updateDishByID);
