@@ -9,18 +9,22 @@ export const userRoutes = ({
   authClient,
   controller = userController,
 }) => {
-  const { getUser, getUserById, signUp, signIn } = controller({
+  const { getUsers, getUserById, signUp, signIn } = controller({
     authClient,
     userRepository: repository,
   });
 
+  // Sign up a new user
   app.route("/auth/signup").post(signUp);
 
+  // Sign in a user
   app.route("/auth/signin").post(signIn);
 
   app.use(validateToken);
 
-  app.route("/users").get(getUser);
+  // Retrieve all users
+  app.route("/users").get(getUsers);
 
+  // Retrieve a specific user
   app.route("/users/:id").get(getUserById);
 };
