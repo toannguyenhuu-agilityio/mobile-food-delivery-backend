@@ -58,4 +58,6 @@ export const AUTH_MESSAGES = {
   MISSING_REQUIRED_FIELDS: "Missing required fields",
   SIGNUP_SUCCESS: "Sign up successful",
   SIGNUP_FAILED: "Sign up failed",
+  SIGNIN_SUCCESS: "Sign in successful",
+  SIGNIN_FAILED: "Sign in failed",
 };

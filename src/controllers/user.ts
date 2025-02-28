@@ -143,13 +143,18 @@ export const userController = ({
             .json({ message: AUTH_MESSAGES.INVALID_CREDENTIALS });
         }
 
-        res.status(STATUS_CODES.OK).json({ accessToken: id_token });
+        res.status(STATUS_CODES.OK).json({
+          message: AUTH_MESSAGES.SIGNIN_SUCCESS,
+          accessToken: id_token,
+        });
       } catch (error) {
-        const errorMessage = JSON.parse(error?.body)?.message;
+        const errorMessage = error?.body
+          ? JSON.parse(error?.body)?.message
+          : AUTH_MESSAGES.SIGNIN_FAILED;
 
         res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: errorMessage || AUTH_MESSAGES.SIGNUP_FAILED });
+          .json({ message: errorMessage });
       }
     },
 

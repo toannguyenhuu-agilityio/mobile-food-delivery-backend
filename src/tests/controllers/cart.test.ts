@@ -48,9 +48,9 @@ const mockDishRepository = {
 const mockCartItemRepository = {
   find: jest.fn(),
   findOne: jest.fn(),
-  save: jest.fn(),
+  save: jest.fn<Promise<CartItem>, []>(),
   remove: jest.fn(),
-  create: jest.fn(),
+  create: jest.fn<Promise<CartItem>, []>(),
 } as unknown as jest.Mocked<Repository<CartItem>>;
 
 describe("Cart Controller", () => {
@@ -228,11 +228,24 @@ describe("Cart Controller", () => {
     });
 
     it("should add the item to the cart", async () => {
+      const initMockReq = {
+        params: { cartId: "1" },
+        body: {
+          dishId: "2",
+          quantity: 1,
+        },
+      } as unknown as Request;
+      mockCartRepository.findOne.mockResolvedValue(CART as unknown as Cart);
       mockDishRepository.findOne.mockResolvedValue({
         ...DISH,
         id: "2",
       } as unknown as Dish);
-      mockCartRepository.findOne.mockResolvedValue(CART as unknown as Cart);
+      mockCartItemRepository.create.mockImplementation(
+        () => CART_ITEM as unknown as CartItem,
+      );
+      mockCartItemRepository.save.mockResolvedValue(
+        CART_ITEM as unknown as CartItem,
+      );
 
       await cartController({
         cartRepository: mockCartRepository,
@@ -241,7 +254,7 @@ describe("Cart Controller", () => {
         cartItemRepository: mockCartItemRepository,
       }).addItemToCart(initMockReq, res);
 
-      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.CREATED);
       expect(res.json).toHaveBeenCalledWith(CART_ITEM);
     });
 
