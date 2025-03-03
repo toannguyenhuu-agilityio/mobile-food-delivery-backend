@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Repository } from "typeorm";
 import { AuthenticationClient } from "auth0";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "bcryptjs";
 
 // Entities
 import { User } from "../entities/user.ts";
