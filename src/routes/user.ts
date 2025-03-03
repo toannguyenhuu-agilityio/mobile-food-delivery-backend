@@ -1,14 +1,30 @@
 import { userController } from "../controllers/user.ts";
 
+// Middlewares
+import { validateToken } from "../middleware/auth0.middleware.ts";
+
 export const userRoutes = ({
   app,
   repository,
+  authClient,
   controller = userController,
 }) => {
-  const { getUser, getUserById, createUser, updateUser, deleteUser } =
-    controller(repository);
+  const { getUsers, getUserById, signUp, signIn } = controller({
+    authClient,
+    userRepository: repository,
+  });
 
-  app.route("/users").get(getUser).post(createUser);
+  // Sign up a new user
+  app.route("/auth/signup").post(signUp);
 
-  app.route("/users/:id").get(getUserById).put(updateUser).delete(deleteUser);
+  // Sign in a user
+  app.route("/auth/signin").post(signIn);
+
+  app.use(validateToken);
+
+  // Retrieve all users
+  app.route("/users").get(getUsers);
+
+  // Retrieve a specific user
+  app.route("/users/:id").get(getUserById);
 };

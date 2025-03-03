@@ -14,29 +14,31 @@ const mockRepository = {
 // Mock controller
 jest.mock("../../controllers/user", () => ({
   userController: jest.fn().mockImplementation(() => ({
-    getUser: jest.fn((req, res) =>
+    getUsers: jest.fn((req, res) =>
       res.status(200).json({ message: "Get all users" }),
     ),
     getUserById: jest.fn((req, res) =>
       res.status(200).json({ message: "Get user by ID" }),
     ),
-    createUser: jest.fn((req, res) =>
+    signUp: jest.fn((req, res) =>
       res.status(201).json({ message: "User created" }),
     ),
-    updateUser: jest.fn((req, res) =>
-      res.status(200).json({ message: "User updated" }),
-    ),
-    deleteUser: jest.fn((req, res) =>
-      res.status(200).json({ message: "User deleted" }),
+    signIn: jest.fn((req, res) =>
+      res.status(200).json({ message: "User signed in" }),
     ),
   })),
+}));
+
+jest.mock("../../middleware/auth0.middleware", () => ({
+  validateToken: jest.fn((req, res, next) => next()),
+  authClient: jest.fn(),
 }));
 
 describe("User Routes", () => {
   let app: express.Application;
   beforeEach(() => {
     app = express();
-    userRoutes({ app, repository: mockRepository });
+    userRoutes({ app, repository: mockRepository, authClient: jest.fn() });
   });
 
   it("should get all users", async () => {
@@ -54,9 +56,9 @@ describe("User Routes", () => {
   });
 
   it("should create a new user", async () => {
-    const response = await request(app).post("/users").send({
-      name: "John Doe",
-      email: "john@example.com",
+    const response = await request(app).post("/auth/signup").send({
+      name: "User Test",
+      email: "usertest@example.com",
       password: "password",
     });
 
@@ -64,21 +66,13 @@ describe("User Routes", () => {
     expect(response.body).toEqual({ message: "User created" });
   });
 
-  it("should update a user", async () => {
-    const response = await request(app).put("/users/1").send({
-      name: "John Doe",
-      email: "john@example.com",
+  it("should sign in a user", async () => {
+    const response = await request(app).post("/auth/signin").send({
+      email: "usertest@example.com",
       password: "password",
     });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ message: "User updated" });
-  });
-
-  it("should delete a user", async () => {
-    const response = await request(app).delete("/users/1");
-
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ message: "User deleted" });
+    expect(response.body).toEqual({ message: "User signed in" });
   });
 });
