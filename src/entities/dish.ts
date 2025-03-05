@@ -4,6 +4,8 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 
 // Entities
@@ -48,4 +50,10 @@ export class Dish {
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.dish)
   orderItems: OrderItem[];
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

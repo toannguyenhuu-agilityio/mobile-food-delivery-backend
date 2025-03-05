@@ -48,7 +48,6 @@ AppDataSource.initialize()
       cartItemRepository,
       dishRepository,
     });
-
     orderRoutes({
       app,
       dataSource: AppDataSource,
