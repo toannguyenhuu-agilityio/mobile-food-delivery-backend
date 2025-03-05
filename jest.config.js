@@ -6,6 +6,11 @@ module.exports = {
     "^.+\\.(ts|tsx)$": ["ts-jest", { tsconfig: "tsconfig.json" }],
   },
   moduleFileExtensions: ["ts", "tsx", "js", "json", "node"],
+  globals: {
+    "ts-jest": {
+      isolatedModules: true,
+    },
+  },
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
     "!<rootDir>/node_modules/",
