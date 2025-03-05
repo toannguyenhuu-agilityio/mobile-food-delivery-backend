@@ -105,7 +105,7 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.customer,
-      } as User);
+      } as unknown as User);
 
       await dishController({
         dishRepository: mockDishRepository,
@@ -124,7 +124,7 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.admin,
-      } as User);
+      } as unknown as User);
 
       mockDishRepository.create.mockReturnValue({
         ...DISH,
@@ -149,7 +149,7 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.admin,
-      } as User);
+      } as unknown as User);
 
       mockDishRepository.create.mockReturnValue({
         ...DISH,
@@ -263,7 +263,7 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.customer,
-      } as User);
+      } as unknown as User);
 
       await dishController({
         dishRepository: mockDishRepository,
@@ -280,6 +280,8 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.admin,
+        dishes: [],
+        carts: [],
       });
       mockDishRepository.findOneBy.mockResolvedValue(null);
 
@@ -299,7 +301,7 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.admin,
-      } as User);
+      } as unknown as User);
 
       const updatedDish = {
         ...DISH,
@@ -324,7 +326,7 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.admin,
-      } as User);
+      } as unknown as User);
 
       mockDishRepository.findOneBy.mockRejectedValue(
         new Error("Internal server error"),
@@ -377,7 +379,7 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.customer,
-      } as User);
+      } as unknown as User);
 
       await dishController({
         dishRepository: mockDishRepository,
@@ -394,6 +396,8 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.admin,
+        dishes: [],
+        carts: [],
       });
       mockDishRepository.delete.mockResolvedValue({
         affected: 0,
@@ -414,7 +418,7 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.admin,
-      } as User);
+      } as unknown as User);
 
       mockDishRepository.delete.mockResolvedValue({
         affected: 1,
@@ -435,7 +439,7 @@ describe("Dish Controller", () => {
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
         role: UserRole.admin,
-      } as User);
+      } as unknown as User);
 
       mockDishRepository.delete.mockRejectedValue(
         new Error("Internal server error"),

@@ -89,7 +89,6 @@ export const dishController = ({
         res.status(STATUS_CODES.NO_CONTENT).json(results);
       } catch (error) {
         console.log("Error creating dish:", error);
-
         res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
           .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });

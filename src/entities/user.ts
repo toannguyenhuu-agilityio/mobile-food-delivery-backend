@@ -2,6 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from "typeorm";
 
 // Entities
 import { Dish } from "./dish.ts";
+import { Cart } from "./cart.ts";
 
 // Types
 import { UserRole } from "../types/user.ts";
@@ -24,5 +25,8 @@ export class User {
   role: UserRole;
 
   @OneToMany(() => Dish, (dish) => dish.user)
-  dish: Dish[];
+  dishes: Dish[];
+
+  @OneToMany(() => Cart, (cart) => cart.user)
+  carts: Cart[];
 }

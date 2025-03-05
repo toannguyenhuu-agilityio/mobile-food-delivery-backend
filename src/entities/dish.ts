@@ -3,12 +3,14 @@ import {
   Column,
   PrimaryGeneratedColumn,
   ManyToOne,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
 } from "typeorm";
 
 // Entities
 import { User } from "./user.ts";
+import { CartItem } from "./cartItem.ts";
 
 // Types
 import { DishCategory } from "../types/dish.ts";
@@ -39,8 +41,11 @@ export class Dish {
   @Column({ type: "varchar", length: 255, default: "meat", nullable: true })
   additionalItem: string | null;
 
-  @ManyToOne(() => User, (user) => user.dish, { nullable: false })
+  @ManyToOne(() => User, (user) => user.dishes, { nullable: false })
   user: User;
+
+  @OneToMany(() => CartItem, (cartItem) => cartItem.dish)
+  cartItems: CartItem[];
 
   @CreateDateColumn()
   createdAt: Date;
