@@ -82,6 +82,7 @@ export const userController = (userRepository: Repository<User>) => {
         res.status(STATUS_CODES.NO_CONTENT).send(results);
       } catch (error) {
         console.log("Error creating user:", error);
+
         res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
           .send(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR);
