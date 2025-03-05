@@ -54,6 +54,10 @@ jest.mock("../../controllers/cart", () => ({
   cartController: jest.fn(),
 }));
 
+jest.mock("../../middleware/auth0.middleware", () => ({
+  validateToken: jest.fn((req, res, next) => next()),
+}));
+
 describe("Cart Routes", () => {
   let app: express.Application;
   const mockCreateCart = jest.fn();

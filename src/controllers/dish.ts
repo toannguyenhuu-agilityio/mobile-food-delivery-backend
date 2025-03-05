@@ -299,7 +299,6 @@ export const dishController = ({
         });
       } catch (error) {
         console.log("Error fetching dishes:", error);
-
         res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
           message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
         });

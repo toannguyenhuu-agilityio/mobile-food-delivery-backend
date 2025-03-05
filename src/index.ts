@@ -17,6 +17,9 @@ import { dishRoutes } from "./routes/dish.ts";
 import { cartRoutes } from "./routes/cart.ts";
 import { orderRoutes } from "./routes/order.ts";
 
+// Middlewares
+import { authClient } from "./middleware/auth0.middleware.ts";
+
 dotenv.config();
 
 const port = process.env.PORT || 3000;
@@ -36,7 +39,7 @@ AppDataSource.initialize()
     const orderItemRepository = AppDataSource.getRepository(OrderItem);
 
     // routes
-    userRoutes({ app, repository: userRepository });
+    userRoutes({ app, repository: userRepository, authClient });
     dishRoutes({ app, userRepository, dishRepository });
     cartRoutes({
       app,
