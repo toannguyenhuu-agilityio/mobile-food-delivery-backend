@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Repository } from "typeorm";
+import { Repository, In } from "typeorm";
 
 // Entities
 import { User } from "../entities/user.ts";
@@ -49,9 +49,12 @@ export const cartController = ({
             .json({ message: USER_MESSAGES.USER_NOT_FOUND });
         }
 
-        // Check if the system already has an active cart for the user
+        // Check if the system already has an active or pending cart for the user
         const existingCart = await cartRepository.findOne({
-          where: { user: { id: userId }, status: CartStatus.Active },
+          where: {
+            user: { id: userId },
+            status: In([CartStatus.Active, CartStatus.Pending]),
+          },
         });
 
         if (existingCart) {
@@ -311,7 +314,7 @@ export const cartController = ({
         cart.discountAmount = discount;
 
         // Mark the cart as completed (order placed)
-        cart.status = CartStatus.Completed;
+        cart.status = CartStatus.Pending;
         await cartRepository.save(cart);
 
         // Here you might want to add order creation logic, payment processing, etc.

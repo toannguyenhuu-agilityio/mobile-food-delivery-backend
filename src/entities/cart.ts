@@ -6,11 +6,13 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToOne,
 } from "typeorm";
 
 // Entities
 import { User } from "./user.ts";
 import { CartItem } from "./cartItem.ts";
+import { Order } from "./order.ts";
 
 // Types
 import { CartStatus } from "../types/cart.ts";
@@ -37,6 +39,9 @@ export class Cart {
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.cart)
   cartItems: CartItem[];
+
+  @OneToOne(() => Order, (order) => order.cart)
+  order: Cart;
 
   @CreateDateColumn()
   createdAt: Date;

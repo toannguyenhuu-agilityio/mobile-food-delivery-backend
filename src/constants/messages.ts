@@ -35,3 +35,13 @@ export const CART_MESSAGES = {
   INVALID_DISH_ID: "Invalid dish ID",
   INVALID_QUANTITY: "Invalid quantity",
 };
+
+export const ORDER_MESSAGES = {
+  ORDER_NOT_FOUND: "Order not found",
+  ORDER_CREATED: "Order created successfully",
+  ORDER_UPDATED: "Order updated successfully",
+  ORDER_DELETED: "Order deleted successfully",
+  ORDER_STATUS_UPDATED: "Order status updated successfully",
+  INVALID_ORDER_STATUS: "Invalid order status",
+  INVALID_PAGE_AND_LIMIT: "Invalid page or limit",
+};

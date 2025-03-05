@@ -11,6 +11,7 @@ import {
 // Entities
 import { User } from "./user.ts";
 import { CartItem } from "./cartItem.ts";
+import { OrderItem } from "./orderItem.ts";
 
 // Types
 import { DishCategory } from "../types/dish.ts";
@@ -46,6 +47,9 @@ export class Dish {
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.dish)
   cartItems: CartItem[];
+
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.dish)
+  orderItems: OrderItem[];
 
   @CreateDateColumn()
   createdAt: Date;

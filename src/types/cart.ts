@@ -1,4 +1,6 @@
 export enum CartStatus {
-  Active = "Active",
-  Completed = "Completed",
+  Active = "active",
+  Pending = "pending",
+  Cancelled = "cancelled",
+  Converted = "converted",
 }

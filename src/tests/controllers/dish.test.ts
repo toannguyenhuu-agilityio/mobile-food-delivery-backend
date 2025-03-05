@@ -139,7 +139,7 @@ describe("Dish Controller", () => {
         userRepository: mockUserRepository,
       }).createDish(mockReq, res);
 
-      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NO_CONTENT);
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.CREATED);
       expect(res.json).toHaveBeenCalledWith(DISH);
     });
 
@@ -282,6 +282,7 @@ describe("Dish Controller", () => {
         role: UserRole.admin,
         dishes: [],
         carts: [],
+        orders: [],
       });
       mockDishRepository.findOneBy.mockResolvedValue(null);
 
@@ -398,6 +399,7 @@ describe("Dish Controller", () => {
         role: UserRole.admin,
         dishes: [],
         carts: [],
+        orders: [],
       });
       mockDishRepository.delete.mockResolvedValue({
         affected: 0,
