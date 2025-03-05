@@ -2,6 +2,11 @@ import { Request, Response } from "express";
 import { Repository } from "typeorm";
 import { User } from "../entities/user.ts";
 
+// Constants
+import { GENERAL_MESSAGES, USER_MESSAGES } from "../constants/messages.ts";
+import { STATUS_CODES } from "../constants/httpStatusCodes.ts";
+import { UserRole } from "../types/user.ts";
+
 export const userController = (userRepository: Repository<User>) => {
   return {
     getUser: async (req: Request, res: Response) => {
@@ -15,7 +20,7 @@ export const userController = (userRepository: Repository<User>) => {
     },
     getUserById: async (req: Request, res: Response) => {
       try {
-        const userId = Number(req.params.id);
+        const userId = req.params.id;
         const user = await userRepository.findOneBy({ id: userId });
 
         if (!user) {
@@ -31,19 +36,61 @@ export const userController = (userRepository: Repository<User>) => {
     },
     createUser: async (req: Request, res: Response) => {
       try {
-        console.log("req.body", req.body);
-        const user = userRepository.create(req.body);
+        const { name, password, email, role } = req.body;
+
+        if (!name || !password || !email || !role) {
+          return res
+            .status(STATUS_CODES.BAD_REQUEST)
+            .send(USER_MESSAGES.USER_NOT_FOUND);
+        }
+
+        // Check if there's already an admin user
+        const adminCount = await userRepository.count({
+          where: { role: UserRole.admin },
+        });
+
+        // If an admin exists and the requested role is admin, reject the request
+        if (adminCount > 0 && UserRole.admin) {
+          return res
+            .status(STATUS_CODES.FORBIDDEN)
+            .send(USER_MESSAGES.ADMIN_ONLY);
+        }
+
+        // If there's already an admin and the requested role is not admin, ensure the role is customer
+        if (adminCount > 0 && role === UserRole.customer) {
+          // Create the user with customer role
+          const user = userRepository.create({
+            name,
+            email,
+            password,
+            role: UserRole.customer, // Ensure the role is customer
+          });
+          const savedUser = await userRepository.save(user);
+
+          return res.status(STATUS_CODES.NO_CONTENT).send(savedUser);
+        }
+
+        const user = userRepository.create({
+          name,
+          email,
+          password,
+          role: role === UserRole.admin ? UserRole.admin : UserRole.customer, // Allow admin only if no admin exists
+        });
+
         const results = await userRepository.save(user);
 
-        res.status(201).send(results);
+        res.status(STATUS_CODES.NO_CONTENT).send(results);
       } catch (error) {
         console.error("Error creating user:", error);
-        res.status(500).send("Internal server error");
+        res
+          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
+          .send(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR);
       }
     },
+
     updateUser: async (req: Request, res: Response) => {
       try {
-        const userId = Number(req.params.id);
+        const userId = req.params.id;
         const user = await userRepository.findOneBy({ id: userId });
 
         if (!user) {
