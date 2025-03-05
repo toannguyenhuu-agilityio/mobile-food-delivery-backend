@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Repository } from "typeorm";
 import { AuthenticationClient } from "auth0";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "bcryptjs";
 
 // Entities
 import { User } from "../entities/user.ts";
@@ -15,12 +15,17 @@ import {
 import { STATUS_CODES } from "../constants/httpStatusCodes.ts";
 import { UserRole } from "../types/user.ts";
 
+// Services
+import { userServices } from "../services/user.ts";
+
 export const userController = ({
   authClient,
   userRepository,
+  service = userServices,
 }: {
   authClient: AuthenticationClient;
   userRepository: Repository<User>;
+  service?: typeof userServices;
 }) => {
   return {
     /**
@@ -34,6 +39,11 @@ export const userController = ({
      */
     signUp: async (req: Request, res: Response) => {
       const { email, password, name } = req.body;
+
+      const userServices = service({
+        payloadReq: { email, password, name },
+        authClient,
+      });
 
       if (!email || !password || !name) {
         return res
@@ -51,12 +61,7 @@ export const userController = ({
       }
 
       try {
-        const createUserResponse = await authClient.database.signUp({
-          email,
-          password,
-          connection: "Username-Password-Authentication", // Default Auth0 connection for username-password
-          user_metadata: { firstName: name },
-        });
+        const createUserResponse = await userServices.registerNewUser();
 
         // Check if Auth0 sign-up was successful
         if (
@@ -117,6 +122,10 @@ export const userController = ({
      */
     signIn: async (req: Request, res: Response) => {
       const { email, password } = req.body;
+      const userServices = service({
+        payloadReq: { email, password, name: "" },
+        authClient,
+      });
 
       try {
         if (!email || !password) {
@@ -125,31 +134,26 @@ export const userController = ({
             .json({ message: AUTH_MESSAGES.MISSING_REQUIRED_FIELDS });
         }
 
-        const tokenResponse = await authClient.oauth.passwordGrant({
-          username: email,
-          password,
-          realm: "Username-Password-Authentication",
-          client_id: process.env.AUTH0_CLIENT_ID,
-          client_secret: process.env.AUTH0_CLIENT_SECRET,
-          scope: "openid profile email", // Define the scope of the access request
-          audience: `https://${process.env.AUTH0_DOMAIN}/api/v2/`, // Define your API audience
-        });
+        const token = await userServices.getAccessToken();
 
-        const { id_token } = tokenResponse.data;
-
-        if (!id_token) {
+        if (!token) {
           return res
             .status(STATUS_CODES.UNAUTHORIZED)
             .json({ message: AUTH_MESSAGES.INVALID_CREDENTIALS });
         }
 
-        res.status(STATUS_CODES.OK).json({ accessToken: id_token });
+        res.status(STATUS_CODES.OK).json({
+          message: AUTH_MESSAGES.SIGNIN_SUCCESS,
+          accessToken: token,
+        });
       } catch (error) {
-        const errorMessage = JSON.parse(error?.body)?.message;
+        const errorMessage = error?.body
+          ? JSON.parse(error?.body)?.message
+          : AUTH_MESSAGES.SIGNIN_FAILED;
 
         res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: errorMessage || AUTH_MESSAGES.SIGNUP_FAILED });
+          .json({ message: errorMessage });
       }
     },
 

@@ -57,8 +57,8 @@ describe("User Routes", () => {
 
   it("should create a new user", async () => {
     const response = await request(app).post("/auth/signup").send({
-      name: "John Doe",
-      email: "john@example.com",
+      name: "User Test",
+      email: "usertest@example.com",
       password: "password",
     });
 
@@ -68,7 +68,7 @@ describe("User Routes", () => {
 
   it("should sign in a user", async () => {
     const response = await request(app).post("/auth/signin").send({
-      email: "john@example.com",
+      email: "usertest@example.com",
       password: "password",
     });
 

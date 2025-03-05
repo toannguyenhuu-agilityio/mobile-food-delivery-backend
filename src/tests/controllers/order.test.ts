@@ -161,15 +161,15 @@ describe("Order Controller", () => {
     });
 
     it("should return a status internal server error", async () => {
-      mockOrderRepository.findAndCount.mockRejectedValue(
-        new Error("Internal server error"),
-      );
+      queryRunnerMock.manager.findOne = jest
+        .fn()
+        .mockRejectedValue(new Error("Some error occurred"));
 
       await orderController({
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).getOrders(req, res);
+      }).createOrder(req, res);
 
       expect(res.status).toHaveBeenCalledWith(
         STATUS_CODES.INTERNAL_SERVER_ERROR,
@@ -217,15 +217,15 @@ describe("Order Controller", () => {
     });
 
     it("should return a status internal server error", async () => {
-      mockOrderRepository.findAndCount.mockRejectedValue(
-        new Error("Internal server error"),
+      mockOrderRepository.findOne.mockRejectedValue(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
 
       await orderController({
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).getOrders(req, res);
+      }).getOrderById(req, res);
 
       expect(res.status).toHaveBeenCalledWith(
         STATUS_CODES.INTERNAL_SERVER_ERROR,
@@ -276,6 +276,25 @@ describe("Order Controller", () => {
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith({
         message: ORDER_MESSAGES.ORDER_STATUS_UPDATED,
+      });
+    });
+
+    it("should return a status internal server error", async () => {
+      mockOrderRepository.findOne.mockRejectedValue(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
+      );
+
+      await orderController({
+        dataSource: mockDataSource,
+        orderRepository: mockOrderRepository,
+        orderItemRepository: mockOrderItemRepository,
+      }).updateOrderStatus(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(
+        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      );
+      expect(res.json).toHaveBeenCalledWith({
+        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
       });
     });
   });
