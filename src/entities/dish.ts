@@ -1,26 +1,16 @@
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  OneToMany,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from "typeorm";
+import { Entity, Column, ManyToOne, OneToMany } from "typeorm";
 
 // Entities
 import { User } from "./user.ts";
 import { CartItem } from "./cartItem.ts";
 import { OrderItem } from "./orderItem.ts";
+import { BaseEntity } from "./base.ts";
 
 // Types
 import { DishCategory } from "../types/dish.ts";
 
 @Entity()
-export class Dish {
-  @PrimaryGeneratedColumn("uuid")
-  id: string;
-
+export class Dish extends BaseEntity {
   @Column()
   name: string;
 
@@ -50,10 +40,4 @@ export class Dish {
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.dish)
   orderItems: OrderItem[];
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }

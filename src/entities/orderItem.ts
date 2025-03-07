@@ -1,21 +1,12 @@
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from "typeorm";
+import { Entity, Column, ManyToOne } from "typeorm";
 
 // Entities
 import { Order } from "./order.ts";
 import { Dish } from "./dish.ts";
+import { BaseEntity } from "./base.ts";
 
 @Entity()
-export class OrderItem {
-  @PrimaryGeneratedColumn("uuid")
-  id: string;
-
+export class OrderItem extends BaseEntity {
   @Column("int")
   quantity: number;
 
@@ -30,10 +21,4 @@ export class OrderItem {
 
   @ManyToOne(() => Order, (order) => order.orderItems, { nullable: false })
   order: Order;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }

@@ -1,11 +1,8 @@
 import {
   Entity,
   Column,
-  PrimaryGeneratedColumn,
   OneToMany,
   ManyToOne,
-  CreateDateColumn,
-  UpdateDateColumn,
   OneToOne,
   JoinColumn,
 } from "typeorm";
@@ -14,15 +11,13 @@ import {
 import { User } from "./user.ts";
 import { Cart } from "./cart.ts";
 import { OrderItem } from "./orderItem.ts";
+import { BaseEntity } from "./base.ts";
 
 // Types
 import { OrderStatus } from "../types/order.ts";
 
 @Entity()
-export class Order {
-  @PrimaryGeneratedColumn("uuid")
-  id: string;
-
+export class Order extends BaseEntity {
   @Column({ type: "enum", enum: OrderStatus, default: OrderStatus.Pending })
   status: OrderStatus;
 
@@ -44,10 +39,4 @@ export class Order {
   @OneToOne(() => Cart, (cart) => cart.order)
   @JoinColumn()
   cart: Cart;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }

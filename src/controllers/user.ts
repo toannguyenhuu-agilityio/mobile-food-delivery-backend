@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { Repository } from "typeorm";
 import { AuthenticationClient } from "auth0";
-import * as bcrypt from "bcryptjs";
 
 // Entities
 import { User } from "../entities/user.ts";
@@ -16,16 +15,19 @@ import { STATUS_CODES } from "../constants/httpStatusCodes.ts";
 import { UserRole } from "../types/user.ts";
 
 // Services
-import { userServices } from "../services/user.ts";
+import { auth0Service } from "../services/auth0Service.ts";
+import { userService as defaultUserService } from "../services/userService.ts";
 
 export const userController = ({
   authClient,
   userRepository,
-  service = userServices,
+  userService = defaultUserService,
+  authService = auth0Service,
 }: {
   authClient: AuthenticationClient;
   userRepository: Repository<User>;
-  service?: typeof userServices;
+  userService?: typeof defaultUserService;
+  authService?: typeof auth0Service;
 }) => {
   return {
     /**
@@ -38,30 +40,31 @@ export const userController = ({
      *
      */
     signUp: async (req: Request, res: Response) => {
-      const { email, password, name } = req.body;
-
-      const userServices = service({
-        payloadReq: { email, password, name },
-        authClient,
-      });
-
-      if (!email || !password || !name) {
-        return res
-          .status(STATUS_CODES.BAD_REQUEST)
-          .json({ message: AUTH_MESSAGES.MISSING_REQUIRED_FIELDS });
-      }
-
-      // Check if user already exists with the given email
-      const existingUser = await userRepository.findOne({ where: { email } });
-
-      if (existingUser) {
-        return res.status(STATUS_CODES.CONFLICT).json({
-          error: AUTH_MESSAGES.USER_ALREADY_EXISTS,
-        });
-      }
-
       try {
-        const createUserResponse = await userServices.registerNewUser();
+        const { email, password, name } = req.body;
+
+        if (!email || !password || !name) {
+          return res
+            .status(STATUS_CODES.BAD_REQUEST)
+            .json({ message: AUTH_MESSAGES.MISSING_REQUIRED_FIELDS });
+        }
+
+        const { registerNewUser } = authService({
+          payloadReq: { email, password, name },
+          authClient,
+        });
+        const { findUser, createUser } = userService(userRepository);
+
+        // Check if user already exists with the given email
+        const existingUser = await findUser({ email });
+
+        if (existingUser) {
+          return res.status(STATUS_CODES.CONFLICT).json({
+            error: AUTH_MESSAGES.USER_ALREADY_EXISTS,
+          });
+        }
+
+        const createUserResponse = await registerNewUser();
 
         // Check if Auth0 sign-up was successful
         if (
@@ -73,35 +76,28 @@ export const userController = ({
           });
         }
 
-        // Hash the password before storing it
-        const hashedPassword = await bcrypt.hash(password, 10);
-
         // Check if the Admin role already exists
-        const existingAdminUser = await userRepository.findOne({
-          where: { role: UserRole.admin },
+        const existingAdminUser = await findUser({
+          role: UserRole.Admin,
         });
 
         // If an Admin user exists, set the new user role as Customer, otherwise, set it as Admin
-        const userRole = existingAdminUser ? UserRole.customer : UserRole.admin;
+        const userRole = existingAdminUser ? UserRole.Customer : UserRole.Admin;
 
-        const newUser = userRepository.create({
+        const newUser = await createUser({
           name,
           email,
-          password: hashedPassword,
+          password,
           role: userRole,
         });
 
-        // Save the user entity to the database
-        const createdUser = await userRepository.save(newUser);
-
-        // Remove sensitive data like password before sending user data in response
-        const { password: _, ...userData } = createdUser;
-
         res.status(STATUS_CODES.CREATED).json({
           message: AUTH_MESSAGES.SIGNUP_SUCCESS,
-          user: userData,
+          user: newUser,
         });
       } catch (error) {
+        console.log("Sign-up error:", error);
+
         const errorMessage = error?.body
           ? JSON.parse(error?.body)?.message
           : AUTH_MESSAGES.SIGNUP_FAILED;
@@ -121,20 +117,30 @@ export const userController = ({
      *
      */
     signIn: async (req: Request, res: Response) => {
-      const { email, password } = req.body;
-      const userServices = service({
-        payloadReq: { email, password, name: "" },
-        authClient,
-      });
-
       try {
+        const { email, password } = req.body || {};
+
         if (!email || !password) {
           return res
             .status(STATUS_CODES.BAD_REQUEST)
             .json({ message: AUTH_MESSAGES.MISSING_REQUIRED_FIELDS });
         }
 
-        const token = await userServices.getAccessToken();
+        const { getAccessToken } = authService({
+          payloadReq: { email, password, name: "" },
+          authClient,
+        });
+        const { findUser } = userService(userRepository);
+
+        const user = await findUser({ email });
+
+        if (!user) {
+          return res
+            .status(STATUS_CODES.NOT_FOUND)
+            .json({ message: USER_MESSAGES.USER_NOT_FOUND });
+        }
+
+        const token = await getAccessToken();
 
         if (!token) {
           return res
@@ -142,16 +148,18 @@ export const userController = ({
             .json({ message: AUTH_MESSAGES.INVALID_CREDENTIALS });
         }
 
-        res.status(STATUS_CODES.OK).json({
+        return res.status(STATUS_CODES.OK).json({
           message: AUTH_MESSAGES.SIGNIN_SUCCESS,
           accessToken: token,
         });
       } catch (error) {
+        console.log("Sign-in error:", error);
+
         const errorMessage = error?.body
           ? JSON.parse(error?.body)?.message
           : AUTH_MESSAGES.SIGNIN_FAILED;
 
-        res
+        return res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
           .json({ message: errorMessage });
       }
@@ -167,16 +175,18 @@ export const userController = ({
      *
      */
     getUsers: async (req: Request, res: Response) => {
+      const { getAllUsers } = userService(userRepository);
+
       try {
-        const users = await userRepository.find();
+        const users = await getAllUsers();
 
-        if (users.length === 0) {
-          return res
-            .status(STATUS_CODES.NOT_FOUND)
-            .json({ message: USER_MESSAGES.USER_NOT_FOUND });
-        }
-
-        res.status(STATUS_CODES.OK).json(users);
+        return res.status(STATUS_CODES.OK).json({
+          message:
+            users.length > 0
+              ? USER_MESSAGES.USERS_FETCHED
+              : USER_MESSAGES.USER_NOT_FOUND,
+          users,
+        });
       } catch (error) {
         console.log("Error fetching users:", error);
 
@@ -198,7 +208,16 @@ export const userController = ({
     getUserById: async (req: Request, res: Response) => {
       try {
         const userId = req.params.id;
-        const user = await userRepository.findOneBy({ id: userId });
+
+        if (!userId) {
+          return res.status(STATUS_CODES.BAD_REQUEST).json({
+            message: USER_MESSAGES.INVALID_USER_ID,
+          });
+        }
+
+        const { findUser } = userService(userRepository);
+
+        const user = await findUser({ id: userId });
 
         if (!user) {
           return res
@@ -206,11 +225,11 @@ export const userController = ({
             .json({ message: USER_MESSAGES.USER_NOT_FOUND });
         }
 
-        res.status(STATUS_CODES.OK).json(user);
+        return res.status(STATUS_CODES.OK).json(user);
       } catch (error) {
         console.log("Error fetching user with id ${req.params.id}:", error);
 
-        res
+        return res
           .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
           .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
       }

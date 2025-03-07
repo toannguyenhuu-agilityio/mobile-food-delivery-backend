@@ -1,6 +1,6 @@
 import { AuthenticationClient } from "auth0";
 
-export const userServices = ({
+export const auth0Service = ({
   payloadReq,
   authClient,
 }: {

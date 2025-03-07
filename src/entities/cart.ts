@@ -1,27 +1,16 @@
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  OneToMany,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToOne,
-} from "typeorm";
+import { Entity, Column, ManyToOne, OneToMany, OneToOne } from "typeorm";
 
 // Entities
 import { User } from "./user.ts";
 import { CartItem } from "./cartItem.ts";
 import { Order } from "./order.ts";
+import { BaseEntity } from "./base.ts";
 
 // Types
 import { CartStatus } from "../types/cart.ts";
 
 @Entity()
-export class Cart {
-  @PrimaryGeneratedColumn("uuid")
-  id: string;
-
+export class Cart extends BaseEntity {
   @Column({ type: "enum", enum: CartStatus, default: CartStatus.Active })
   status: CartStatus;
 
@@ -42,10 +31,4 @@ export class Cart {
 
   @OneToOne(() => Order, (order) => order.cart)
   order: Cart;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }

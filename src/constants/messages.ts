@@ -15,6 +15,8 @@ export const DISH_MESSAGES = {
 
 export const USER_MESSAGES = {
   USER_NOT_FOUND: "User not found",
+  USERS_FETCHED: "Users fetched successfully",
+  INVALID_USER_ID: "Invalid user ID",
   ADMIN_ONLY: "Only one admin user can exist. You cannot create another admin.",
 };
 
@@ -56,8 +58,8 @@ export const AUTH_MESSAGES = {
   USER_UPDATED: "User updated successfully",
   UNAUTHORIZED_ACCESS: "Unauthorized Access",
   MISSING_REQUIRED_FIELDS: "Missing required fields",
-  SIGNUP_SUCCESS: "Sign up successful",
+  SIGNUP_SUCCESS: "Sign up successfully",
   SIGNUP_FAILED: "Sign up failed",
-  SIGNIN_SUCCESS: "Sign in successful",
+  SIGNIN_SUCCESS: "Sign in successfully",
   SIGNIN_FAILED: "Sign in failed",
 };

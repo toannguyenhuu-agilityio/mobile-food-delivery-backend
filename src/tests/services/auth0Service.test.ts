@@ -1,5 +1,7 @@
 import { AuthenticationClient } from "auth0";
-import { userServices } from "../../services/user"; // Adjust path accordingly
+
+// Services
+import { auth0Service } from "../../services/auth0Service"; // Adjust path accordingly
 
 jest.mock("auth0", () => {
   return {
@@ -23,7 +25,7 @@ const mockAuthClient = {
   },
 } as unknown as AuthenticationClient;
 
-describe("userServices", () => {
+describe("authService", () => {
   let authClient;
   let service;
   let payloadReq;
@@ -35,7 +37,7 @@ describe("userServices", () => {
       name: "John Doe",
     };
     authClient = mockAuthClient;
-    service = userServices({ payloadReq, authClient });
+    service = auth0Service({ payloadReq, authClient });
   });
 
   afterEach(() => {

@@ -1,18 +1,16 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from "typeorm";
+import { Entity, Column, OneToMany } from "typeorm";
 
 // Entities
 import { Dish } from "./dish.ts";
 import { Cart } from "./cart.ts";
 import { Order } from "./order.ts";
+import { BaseEntity } from "./base.ts";
 
 // Types
 import { UserRole } from "../types/user.ts";
 
 @Entity()
-export class User {
-  @PrimaryGeneratedColumn("uuid")
-  id: string;
-
+export class User extends BaseEntity {
   @Column()
   name: string;
 
@@ -22,7 +20,7 @@ export class User {
   @Column()
   password: string;
 
-  @Column({ type: "enum", enum: UserRole, default: UserRole.customer })
+  @Column({ type: "enum", enum: UserRole, default: UserRole.Customer })
   role: UserRole;
 
   @OneToMany(() => Dish, (dish) => dish.user)
