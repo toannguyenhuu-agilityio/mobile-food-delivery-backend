@@ -69,7 +69,7 @@ export const userController = ({
         // Check if Auth0 sign-up was successful
         if (
           !createUserResponse ||
-          !JSON.parse(JSON.stringify(createUserResponse)).data._id
+          !JSON.parse(JSON.stringify(createUserResponse)).data?._id
         ) {
           return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             message: AUTH_MESSAGES.SIGNUP_FAILED,
@@ -130,6 +130,7 @@ export const userController = ({
           payloadReq: { email, password, name: "" },
           authClient,
         });
+
         const { findUser } = userService(userRepository);
 
         const user = await findUser({ email });
@@ -180,7 +181,7 @@ export const userController = ({
       try {
         const users = await getAllUsers();
 
-        return res.status(STATUS_CODES.OK).json({
+        return res.status(users.length > 0 ? STATUS_CODES.OK : STATUS_CODES.NOT_FOUND).json({
           message:
             users.length > 0
               ? USER_MESSAGES.USERS_FETCHED
