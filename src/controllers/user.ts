@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { Repository } from "typeorm";
 import { AuthenticationClient } from "auth0";
 
@@ -6,11 +6,7 @@ import { AuthenticationClient } from "auth0";
 import { User } from "../entities/user.ts";
 
 // Constants
-import {
-  AUTH_MESSAGES,
-  GENERAL_MESSAGES,
-  USER_MESSAGES,
-} from "../constants/messages.ts";
+import { AUTH_MESSAGES, USER_MESSAGES } from "../constants/messages.ts";
 import { STATUS_CODES } from "../constants/httpStatusCodes.ts";
 import { UserRole } from "../types/user.ts";
 
@@ -170,12 +166,13 @@ export const userController = ({
      * Fetches all users from the database.
      * @param {Object} req - The request object.
      * @param {Object} res - The response object used to send the response.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the users are successfully fetched.
      * @throws {Error} - Throws an error if an unexpected issue occurs while fetching the users.
      *
      */
-    getUsers: async (req: Request, res: Response) => {
+    getUsers: async (req: Request, res: Response, next: NextFunction) => {
       const { getAllUsers } = userService(userRepository);
 
       try {
@@ -191,11 +188,7 @@ export const userController = ({
             users,
           });
       } catch (error) {
-        console.log("Error fetching users:", error);
-
-        res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
-          message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-        });
+        next(error);
       }
     },
 
@@ -203,12 +196,13 @@ export const userController = ({
      * Fetches a user by their ID from the database.
      * @param {Object} req - The request object containing the user ID.
      * @param {Object} res - The response object used to send the response.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the user is successfully fetched.
      * @throws {Error} - Throws an error if an unexpected issue occurs while fetching the user.
      *
      */
-    getUserById: async (req: Request, res: Response) => {
+    getUserById: async (req: Request, res: Response, next: NextFunction) => {
       try {
         const userId = req.params.id;
 
@@ -230,11 +224,7 @@ export const userController = ({
 
         return res.status(STATUS_CODES.OK).json(user);
       } catch (error) {
-        console.log("Error fetching user with id ${req.params.id}:", error);
-
-        return res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
   };

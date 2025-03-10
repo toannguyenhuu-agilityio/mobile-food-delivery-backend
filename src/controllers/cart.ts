@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { Repository, In } from "typeorm";
 
 // Entities
@@ -9,39 +9,44 @@ import { Dish } from "../entities/dish.ts";
 
 // Types
 import { STATUS_CODES } from "../constants/httpStatusCodes.ts";
-import {
-  GENERAL_MESSAGES,
-  CART_MESSAGES,
-  USER_MESSAGES,
-} from "../constants/messages.ts";
+import { CART_MESSAGES, USER_MESSAGES } from "../constants/messages.ts";
 import { CartStatus } from "../types/cart.ts";
+import { IUserRequest } from "../types/user.ts";
+
+// Services
+import { userService as defaultUserService } from "../services/userService.ts";
 
 export const cartController = ({
   cartRepository,
   userRepository,
   dishRepository,
   cartItemRepository,
+  userService = defaultUserService,
 }: {
   cartRepository: Repository<Cart>;
   userRepository: Repository<User>;
   dishRepository: Repository<Dish>;
   cartItemRepository: Repository<CartItem>;
+  userService?: typeof defaultUserService;
 }) => {
   return {
     /**
      * Creates a new cart for the user.
      * @param {Object} req - The request object containing the user ID.
      * @param {Object} res - The response object used to send the response.
+     * @param {Object} next - The next middleware function.
      * 
      * @returns {Promise<void>} - A promise that resolves when the cart is successfully created.
      * @throws {Error} - Throws an error if an unexpected issue occurs while creating the cart.
     
      */
-    createCart: async (req: Request, res: Response) => {
-      const { userId } = req.body;
-
+    createCart: async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const user = await userRepository.findOne({ where: { id: userId } });
+        const { userId } = req.body;
+
+        const { findUser } = userService(userRepository);
+
+        const user = await findUser({ id: userId });
 
         if (!user) {
           return res
@@ -71,10 +76,7 @@ export const cartController = ({
 
         return res.status(STATUS_CODES.CREATED).json(newCart);
       } catch (error) {
-        console.log("Error creating cart:", error);
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
 
@@ -82,19 +84,28 @@ export const cartController = ({
      * Retrieves the active cart details for the user. Only one active cart is operated at a time.
      * @param {Object} req - The request object containing the user ID.
      * @param {Object} res - The response object used to send the response.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the cart details are successfully retrieved.
      * @throws {Error} - Throws an error if an unexpected issue occurs while retrieving the cart details.
      *
      */
-    getCartDetail: async (req: Request, res: Response) => {
-      const { userId } = req.params;
-
+    getCartDetail: async (
+      req: Request & IUserRequest,
+      res: Response,
+      next: NextFunction,
+    ) => {
       try {
-        const cart = await cartRepository.findOne({
-          where: { user: { id: userId }, status: CartStatus.Active },
-          relations: ["cartItems", "cartItems.dish"],
-        });
+        const { email } = req.user;
+
+        const cart = await cartRepository
+          .createQueryBuilder("cart")
+          .innerJoinAndSelect("cart.user", "user")
+          .leftJoinAndSelect("cart.cartItems", "cartItem")
+          .leftJoinAndSelect("cartItem.dish", "dish")
+          .where("user.email = :email", { email })
+          .andWhere("cart.status = :status", { status: CartStatus.Active })
+          .getOne();
 
         if (!cart) {
           return res.status(STATUS_CODES.NOT_FOUND).json({
@@ -104,10 +115,7 @@ export const cartController = ({
 
         res.status(STATUS_CODES.OK).json(cart);
       } catch (error) {
-        console.log("Error fetching cart:", error);
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
 
@@ -115,15 +123,15 @@ export const cartController = ({
      * Adds an item to the user's cart.
      * @param {Object} req - The request object containing the cart id, dish id and quantity.
      * @param {Object} res - The response object used to send the response.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the item is successfully added to the cart.
      * @throws {Error} - Throws an error if an unexpected issue occurs while adding the item to the cart.
      */
-    addItemToCart: async (req: Request, res: Response) => {
-      const { cartId } = req.params;
-      const { dishId, quantity } = req.body;
-
+    addItemToCart: async (req: Request, res: Response, next: NextFunction) => {
       try {
+        const { dishId, quantity, cartId } = req.body;
+
         const cart = await cartRepository.findOne({
           where: { id: cartId, status: CartStatus.Active },
           relations: ["cartItems", "cartItems.dish"],
@@ -160,10 +168,7 @@ export const cartController = ({
 
         return res.status(STATUS_CODES.CREATED).json(newItem);
       } catch (error) {
-        console.log("Error adding item to cart:", error);
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
 
@@ -171,15 +176,20 @@ export const cartController = ({
      * Updates the quantity or price of an item in the user's cart.
      * @param {Object} req - The request object containing the cart id and item id.
      * @param {Object} res - The response object used to send the response.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the item is successfully updated in the cart.
      * @throws {Error} - Throws an error if an unexpected issue occurs while updating the item in the cart.
      */
-    updateItemInCart: async (req: Request, res: Response) => {
-      const { cartId, itemId } = req.params;
-      const { quantity } = req.body;
-
+    updateItemInCart: async (
+      req: Request,
+      res: Response,
+      next: NextFunction,
+    ) => {
       try {
+        const { itemId } = req.params;
+        const { quantity, cartId } = req.body;
+
         const cart = await cartRepository.findOne({
           where: { id: cartId, status: CartStatus.Active },
           relations: ["cartItems", "cartItems.dish"],
@@ -212,10 +222,7 @@ export const cartController = ({
 
         res.status(STATUS_CODES.OK).json(result);
       } catch (error) {
-        console.log("Error updating cart item:", error);
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
 
@@ -223,15 +230,21 @@ export const cartController = ({
      * Removes an item from the user's cart.
      * @param {Object} req - The request object containing the cart id and item id.
      * @param {Object} res - The response object used to send the response.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the item is successfully removed from the cart.
      * @throws {Error} - Throws an error if an unexpected issue occurs while removing the item from the cart.
      *
      */
-    removeItemFromCart: async (req: Request, res: Response) => {
-      const { cartId, itemId } = req.params;
-
+    removeItemFromCart: async (
+      req: Request,
+      res: Response,
+      next: NextFunction,
+    ) => {
       try {
+        const { itemId } = req.params;
+        const { cartId } = req.body;
+
         const cart = await cartRepository.findOne({
           where: { id: cartId, status: CartStatus.Active },
           relations: ["cartItems", "cartItems.dish"],
@@ -265,10 +278,7 @@ export const cartController = ({
           message: CART_MESSAGES.CART_ITEM_REMOVED,
         });
       } catch (error) {
-        console.log("Error removing item from cart:", error);
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
 
@@ -276,11 +286,12 @@ export const cartController = ({
      * Completes the checkout process for the user's cart.
      * @param {Object} req - The request object containing the user ID.
      * @param {Object} res - The response object used to send the response.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the checkout process is completed.
      * @throws {Error} - Throws an error if an unexpected issue occurs while completing the checkout process.
      */
-    checkoutCart: async (req: Request, res: Response) => {
+    checkoutCart: async (req: Request, res: Response, next: NextFunction) => {
       const { userId, vat, discount } = req.body;
 
       try {
@@ -323,10 +334,7 @@ export const cartController = ({
           .status(STATUS_CODES.OK)
           .json({ message: CART_MESSAGES.CHECKOUT_SUCCESS, cart });
       } catch (error) {
-        console.log("Error during checkout:", error);
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
   };

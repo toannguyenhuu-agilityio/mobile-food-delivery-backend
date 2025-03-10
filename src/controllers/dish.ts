@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { Repository } from "typeorm";
 
 // Entities
@@ -31,6 +31,7 @@ export const dishController = ({
      * @param {Object} req - The request object containing the dish data.
      * @param {Object} res - The response object used to send the response. Sends a response
      *   indicating the result of the dish creation process.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the dish is successfully created
      *   or rejects if there is an error during the process.
@@ -38,7 +39,7 @@ export const dishController = ({
      * @throws {Error} - Throws an error if an unexpected issue occurs while creating the dish,
      *   such as database errors or validation issues.
      */
-    createDish: async (req: Request, res: Response) => {
+    createDish: async (req: Request, res: Response, next: NextFunction) => {
       try {
         const {
           name,
@@ -88,10 +89,7 @@ export const dishController = ({
 
         res.status(STATUS_CODES.CREATED).json(results);
       } catch (error) {
-        console.log("Error creating dish:", error);
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
 
@@ -101,6 +99,7 @@ export const dishController = ({
      * @param {Object} req - The request object containing the ID of the dish to retrieve.
      * @param {Object} res - The response object used to send the response. Sends a response
      *   indicating the result of the dish retrieval process.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the dish is successfully retrieved
      *   or rejects if there is an error during the process.
@@ -108,7 +107,7 @@ export const dishController = ({
      * @throws {Error} - Throws an error if an unexpected issue occurs while retrieving the dish,
      *   such as database errors or validation issues.
      */
-    getDishByID: async (req: Request, res: Response) => {
+    getDishByID: async (req: Request, res: Response, next: NextFunction) => {
       const id = req.params.id;
 
       try {
@@ -123,11 +122,7 @@ export const dishController = ({
 
         res.status(STATUS_CODES.OK).json(dish);
       } catch (error) {
-        console.log("Error fetching dish with id ${req.params.id}:", error);
-
-        res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
 
@@ -138,6 +133,7 @@ export const dishController = ({
      *   updated data.
      * @param {Object} res - The response object used to send the response. Sends a response
      *   indicating the result of the dish update process.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the dish is successfully updated.
      *   or rejects if there is an error during the process.
@@ -145,7 +141,7 @@ export const dishController = ({
      * @throws {Error} - Throws an error if an unexpected issue occurs while updating the dish,
      *   such as database errors or validation issues.
      * */
-    updateDishByID: async (req: Request, res: Response) => {
+    updateDishByID: async (req: Request, res: Response, next: NextFunction) => {
       const id = req.params.id;
       const userId = req.body.userId;
 
@@ -180,11 +176,7 @@ export const dishController = ({
 
         res.status(STATUS_CODES.OK).json(results);
       } catch (error) {
-        console.log("Error updating dish with id ${req.params.id}:", error);
-
-        res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
-          message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-        });
+        next(error);
       }
     },
 
@@ -194,6 +186,7 @@ export const dishController = ({
      * @param {Object} req - The request object containing the ID of the dish to delete.
      * @param {Object} res - The response object used to send the response. Sends a response
      *   indicating the result of the dish deletion process.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the dish is successfully deleted.
      *   or rejects if there is an error during the process.
@@ -201,7 +194,7 @@ export const dishController = ({
      * @throws {Error} - Throws an error if an unexpected issue occurs while deleting the dish,
      *   such as database errors or validation issues.
      */
-    deleteDishByID: async (req: Request, res: Response) => {
+    deleteDishByID: async (req: Request, res: Response, next: NextFunction) => {
       const id = req.params.id;
       const userId = req.body.userId;
 
@@ -234,11 +227,7 @@ export const dishController = ({
           .status(STATUS_CODES.OK)
           .json({ message: DISH_MESSAGES.DISH_DELETED });
       } catch (error) {
-        console.log("Error deleting dish with id ${req.params.id}:", error);
-
-        res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
-          message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-        });
+        next(error);
       }
     },
 
@@ -248,6 +237,7 @@ export const dishController = ({
      * @param {Object} req - The request object containing the category, page, and limit parameters.
      * @param {Object} res - The response object used to send the response. Sends a response
      *   indicating the result of the dish retrieval process.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the dishes are successfully retrieved.
      *   or rejects if there is an error during the process.
@@ -255,7 +245,7 @@ export const dishController = ({
      * @throws {Error} - Throws an error if an unexpected issue occurs while retrieving the dishes,
      *   such as database errors or validation issues.
      * */
-    getDishes: async (req: Request, res: Response) => {
+    getDishes: async (req: Request, res: Response, next: NextFunction) => {
       const { category, page, limit } = req.query;
       const categoryParam = (category as DishCategory) || DishCategory.Main;
 
@@ -298,10 +288,7 @@ export const dishController = ({
           },
         });
       } catch (error) {
-        console.log("Error fetching dishes:", error);
-        res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
-          message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-        });
+        next(error);
       }
     },
   };
