@@ -28,19 +28,19 @@ export const cartRoutes = ({
   app.use(validateToken);
 
   // Create a new cart for a user
-  app.post("/cart", createCart);
+  app.post("/carts", createCart);
 
   // View the active cart for a specific user (based on user ID or session)
-  app.get("/cart/:userId", getCartDetail);
+  app.get("/carts", getCartDetail);
 
   // Add an item to a specific cart
-  app.post("/cart/:cartId/item", addItemToCart);
+  app.post("/cartItems", addItemToCart);
 
   app
-    .route("/cart/:cartId/item/:itemId")
+    .route("/cartItems/:cartItemId")
     .put(updateItemInCart)
     .delete(removeItemFromCart);
 
   // Checkout a cart
-  app.post("/cart/checkout", checkoutCart);
+  app.post("/carts/checkout", checkoutCart);
 };

@@ -17,12 +17,12 @@ export const dishRoutes = ({
 
   app.use(validateToken);
 
-  app.post("/dish", createDish);
+  app.post("/dishes", createDish);
 
   app.get("/dishes", getDishes);
 
   app
-    .route("/dish/:id")
+    .route("/dishes/:id")
     .all(validateToken)
     .get(getDishByID)
     .delete(deleteDishByID)

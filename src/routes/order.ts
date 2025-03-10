@@ -20,16 +20,16 @@ export const orderRoutes = ({
   app.use(validateToken);
 
   // Create a new order
-  app.post("/order", createOrder);
+  app.post("/orders", createOrder);
 
   // Retrieve all orders
-  app.get("/orders/:userId", getOrders);
+  app.get("/orders", getOrders);
 
   // Retrieve a specific order
-  app.get("/order/:id", getOrderById);
+  app.get("/orders/:id", getOrderById);
 
   // Update the status of an order
-  app.put("/order/:id", updateOrderStatus);
+  app.put("/orders/:id", updateOrderStatus);
 };
 
 export default orderRoutes;
