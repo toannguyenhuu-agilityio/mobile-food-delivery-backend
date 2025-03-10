@@ -15,16 +15,16 @@ export const userRoutes = ({
   });
 
   // Sign up a new user
-  app.route("/auth/signup").post(signUp);
+  app.post("/auth/signup", signUp);
 
   // Sign in a user
-  app.route("/auth/signin").post(signIn);
+  app.post("/auth/signin", signIn);
 
   app.use(validateToken);
 
   // Retrieve all users
-  app.route("/users").get(getUsers);
+  app.get("/users", getUsers);
 
   // Retrieve a specific user
-  app.route("/users/:id").get(getUserById);
+  app.get("/users/:id", getUserById);
 };

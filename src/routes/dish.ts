@@ -15,9 +15,11 @@ export const dishRoutes = ({
       dishRepository,
     });
 
-  app.route("/dish").post(validateToken, createDish);
+  app.use(validateToken);
 
-  app.route("/dishes").get(validateToken, getDishes);
+  app.post("/dish", createDish);
+
+  app.get("/dishes", getDishes);
 
   app
     .route("/dish/:id")

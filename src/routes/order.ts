@@ -17,17 +17,19 @@ export const orderRoutes = ({
       orderItemRepository,
     });
 
+  app.use(validateToken);
+
   // Create a new order
-  app.route("/order").post(validateToken, createOrder);
+  app.post("/order", createOrder);
 
   // Retrieve all orders
-  app.route("/orders/:userId").get(validateToken, getOrders);
+  app.get("/orders/:userId", getOrders);
 
   // Retrieve a specific order
-  app.route("/order/:id").get(validateToken, getOrderById);
+  app.get("/order/:id", getOrderById);
 
   // Update the status of an order
-  app.route("/order/:id").put(validateToken, updateOrderStatus);
+  app.put("/order/:id", updateOrderStatus);
 };
 
 export default orderRoutes;

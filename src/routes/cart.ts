@@ -25,23 +25,22 @@ export const cartRoutes = ({
     cartItemRepository,
   });
 
+  app.use(validateToken);
+
   // Create a new cart for a user
-  app.route("/cart").post(validateToken, createCart);
+  app.post("/cart", createCart);
 
   // View the active cart for a specific user (based on user ID or session)
-  app.route("/cart/:userId").get(validateToken, getCartDetail);
+  app.get("/cart/:userId", getCartDetail);
 
   // Add an item to a specific cart
-  app.route("/cart/:cartId/item").post(validateToken, addItemToCart);
+  app.post("/cart/:cartId/item", addItemToCart);
 
-  // Update an item in a cart
-  app.route("/cart/:cartId/item/:itemId").put(validateToken, updateItemInCart);
-
-  // Remove an item from a cart
   app
     .route("/cart/:cartId/item/:itemId")
-    .delete(validateToken, removeItemFromCart);
+    .put(updateItemInCart)
+    .delete(removeItemFromCart);
 
   // Checkout a cart
-  app.route("/cart/checkout").post(validateToken, checkoutCart);
+  app.post("/cart/checkout", checkoutCart);
 };
