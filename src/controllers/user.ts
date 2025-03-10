@@ -181,13 +181,15 @@ export const userController = ({
       try {
         const users = await getAllUsers();
 
-        return res.status(users.length > 0 ? STATUS_CODES.OK : STATUS_CODES.NOT_FOUND).json({
-          message:
-            users.length > 0
-              ? USER_MESSAGES.USERS_FETCHED
-              : USER_MESSAGES.USER_NOT_FOUND,
-          users,
-        });
+        return res
+          .status(users.length > 0 ? STATUS_CODES.OK : STATUS_CODES.NOT_FOUND)
+          .json({
+            message:
+              users.length > 0
+                ? USER_MESSAGES.USERS_FETCHED
+                : USER_MESSAGES.USER_NOT_FOUND,
+            users,
+          });
       } catch (error) {
         console.log("Error fetching users:", error);
 
