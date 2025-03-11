@@ -45,7 +45,6 @@ export const orderController = ({
 
       try {
         // Start a transaction
-
         await queryRunner.connect();
         await queryRunner.startTransaction();
 

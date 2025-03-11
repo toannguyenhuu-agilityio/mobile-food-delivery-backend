@@ -2,6 +2,7 @@ import request from "supertest";
 import express from "express";
 
 import { userRoutes } from "../../routes/user.ts";
+import { STATUS_CODES } from "../../constants/httpStatusCodes.ts";
 
 // Mock repository
 const mockRepository = {
@@ -44,14 +45,14 @@ describe("User Routes", () => {
   it("should get all users", async () => {
     const response = await request(app).get("/users");
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual({ message: "Get all users" });
   });
 
   it("should get user by ID", async () => {
     const response = await request(app).get("/users/1");
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual({ message: "Get user by ID" });
   });
 
@@ -62,7 +63,7 @@ describe("User Routes", () => {
       password: "password",
     });
 
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(STATUS_CODES.CREATED);
     expect(response.body).toEqual({ message: "User created" });
   });
 
@@ -72,7 +73,7 @@ describe("User Routes", () => {
       password: "password",
     });
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual({ message: "User signed in" });
   });
 });

@@ -23,13 +23,9 @@ import {
   USER_MESSAGES,
 } from "../../constants/messages.ts";
 
-const mockCartRepository = {
-  find: jest.fn(),
-  findOne: jest.fn(),
-  save: jest.fn(),
-  remove: jest.fn(),
-  create: jest.fn(),
-} as unknown as jest.Mocked<Repository<Cart>>;
+// Services
+import { userService } from "../../services/userService.ts";
+import { IUserRequest } from "../../types/user.ts";
 
 const mockUserRepository = {
   find: jest.fn(),
@@ -45,13 +41,36 @@ const mockDishRepository = {
   remove: jest.fn(),
 } as unknown as jest.Mocked<Repository<Dish>>;
 
+const mockQueryBuilder = {
+  innerJoinAndSelect: jest.fn().mockReturnThis(),
+  leftJoinAndSelect: jest.fn().mockReturnThis(),
+  where: jest.fn().mockReturnThis(),
+  andWhere: jest.fn().mockReturnThis(),
+  getOne: jest.fn().mockResolvedValue(CART), // Replace `mockCart` with your mocked cart object
+};
+
+const mockCartRepository = {
+  find: jest.fn(),
+  findOne: jest.fn(),
+  save: jest.fn(),
+  remove: jest.fn(),
+  create: jest.fn(),
+  createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+} as unknown as jest.Mocked<Repository<Cart>>;
+
 const mockCartItemRepository = {
   find: jest.fn(),
   findOne: jest.fn(),
   save: jest.fn<Promise<CartItem>, []>(),
-  remove: jest.fn(),
+  remove: jest.fn<Promise<CartItem>, []>(),
   create: jest.fn<Promise<CartItem>, []>(),
 } as unknown as jest.Mocked<Repository<CartItem>>;
+
+const mockUserService = jest.fn().mockReturnValue({
+  findUser: jest.fn(),
+  getAllUsers: jest.fn(),
+  createUser: jest.fn(),
+}) as unknown as typeof userService;
 
 describe("Cart Controller", () => {
   afterEach(() => {
@@ -69,15 +88,22 @@ describe("Cart Controller", () => {
       json: jest.fn(),
     } as unknown as Response;
 
+    const mockNext = jest.fn();
+
     it("should return a status not found if user is not found", async () => {
-      mockUserRepository.findOne.mockResolvedValue(null);
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
 
       await cartController({
         cartRepository: mockCartRepository,
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: {} as Repository<CartItem>,
-      }).createCart(initMockReq, res);
+        userService: mockUserService as unknown as typeof userService,
+      }).createCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -85,62 +111,95 @@ describe("Cart Controller", () => {
       });
     });
 
-    it("should create a new cart", async () => {
-      mockUserRepository.findOne.mockResolvedValue(USER as unknown as User);
-      mockCartRepository.create.mockImplementation(
-        () => CART as unknown as Cart,
-      );
+    it("should return a status conflict if cart already exists", async () => {
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(USER),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
+      mockCartRepository.findOne.mockResolvedValue(CART as unknown as Cart);
 
       await cartController({
         cartRepository: mockCartRepository,
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: {} as Repository<CartItem>,
-      }).createCart(initMockReq, res);
+        userService: mockUserService as unknown as typeof userService,
+      }).createCart(initMockReq, res, mockNext);
+
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.CONFLICT);
+      expect(res.json).toHaveBeenCalledWith({
+        message: CART_MESSAGES.CART_ALREADY_EXISTS,
+      });
+    });
+
+    it("should create a new cart", async () => {
+      mockCartRepository.findOne.mockResolvedValue(null);
+      mockCartRepository.create.mockImplementation(
+        () => CART as unknown as Cart,
+      );
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(USER),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
+
+      await cartController({
+        cartRepository: mockCartRepository,
+        userRepository: mockUserRepository,
+        dishRepository: mockDishRepository,
+        cartItemRepository: {} as Repository<CartItem>,
+        userService: mockUserService as unknown as typeof userService,
+      }).createCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.CREATED);
       expect(res.json).toHaveBeenCalledWith(CART);
     });
 
     it("should return an internal server error", async () => {
-      mockUserRepository.findOne.mockRejectedValue(
-        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
-      );
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest
+          .fn()
+          .mockRejectedValue(new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR)),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
 
       await cartController({
         cartRepository: mockCartRepository,
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: {} as Repository<CartItem>,
-      }).createCart(initMockReq, res);
+        userService: mockUserService as unknown as typeof userService,
+      }).createCart(initMockReq, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 
   describe("getCartDetail", () => {
     const initMockReq = {
-      params: { id: "1" },
-    } as unknown as Request;
+      user: {
+        email: "usertest@gmail.com",
+      },
+    } as unknown as Request & IUserRequest;
     const res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     } as unknown as Response;
+    const mockNext = jest.fn();
 
     it("should return a status not found if cart is not found", async () => {
-      mockCartRepository.findOne.mockResolvedValue(null);
+      mockQueryBuilder.getOne.mockResolvedValue(null);
 
       await cartController({
         cartRepository: mockCartRepository,
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: {} as Repository<CartItem>,
-      }).getCartDetail(initMockReq, res);
+      }).getCartDetail(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -149,21 +208,21 @@ describe("Cart Controller", () => {
     });
 
     it("should return the cart details", async () => {
-      mockCartRepository.findOne.mockResolvedValue(CART as unknown as Cart);
+      mockQueryBuilder.getOne.mockResolvedValue(CART);
 
       await cartController({
         cartRepository: mockCartRepository,
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: {} as Repository<CartItem>,
-      }).getCartDetail(initMockReq, res);
+      }).getCartDetail(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith(CART);
     });
 
     it("should return an internal server error", async () => {
-      mockCartRepository.findOne.mockRejectedValue(
+      mockQueryBuilder.getOne.mockRejectedValue(
         new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
 
@@ -172,22 +231,19 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: {} as Repository<CartItem>,
-      }).getCartDetail(initMockReq, res);
+      }).getCartDetail(initMockReq, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 
   describe("addItemToCart", () => {
     const initMockReq = {
-      params: { cartId: "1" },
       body: {
         dishId: "1",
+        cartId: "1",
         quantity: 1,
       },
     } as unknown as Request;
@@ -195,6 +251,7 @@ describe("Cart Controller", () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     } as unknown as Response;
+    const mockNext = jest.fn();
 
     it("should return a status not found if cart is not found", async () => {
       mockCartRepository.findOne.mockResolvedValue(null);
@@ -204,7 +261,7 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).addItemToCart(initMockReq, res);
+      }).addItemToCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -221,7 +278,7 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).addItemToCart(initMockReq, res);
+      }).addItemToCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith(CART_ITEM);
@@ -252,7 +309,7 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).addItemToCart(initMockReq, res);
+      }).addItemToCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.CREATED);
       expect(res.json).toHaveBeenCalledWith(CART_ITEM);
@@ -268,28 +325,24 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).addItemToCart(initMockReq, res);
+      }).addItemToCart(initMockReq, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 
   describe("updateItemInCart", () => {
     const initMockReq = {
-      params: { cartId: "1", itemId: "1234" },
-      body: {
-        quantity: 1,
-      },
+      params: { itemId: "1234" },
+      body: { cartId: "1", quantity: 1 },
     } as unknown as Request;
     const res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     } as unknown as Response;
+    const mockNext = jest.fn();
 
     it("should return a status not found if cart is not found", async () => {
       mockCartRepository.findOne.mockResolvedValue(null);
@@ -299,7 +352,7 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).updateItemInCart(initMockReq, res);
+      }).updateItemInCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -316,7 +369,7 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).updateItemInCart(initMockReq, res);
+      }).updateItemInCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -338,7 +391,7 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).updateItemInCart(initMockReq, res);
+      }).updateItemInCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith(CART_ITEM);
@@ -355,25 +408,26 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).updateItemInCart(initMockReq, res);
+      }).updateItemInCart(initMockReq, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 
   describe("removeItemFromCart", () => {
     const initMockReq = {
-      params: { cartId: "1", dishId: "1" },
+      params: { dishId: "1" },
+      body: {
+        cartId: "1",
+      },
     } as unknown as Request;
     const res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     } as unknown as Response;
+    const mockNext = jest.fn();
 
     it("should return a status not found if cart is not found", async () => {
       mockCartRepository.findOne.mockResolvedValue(null);
@@ -383,7 +437,7 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).removeItemFromCart(initMockReq, res);
+      }).removeItemFromCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -399,7 +453,26 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).removeItemFromCart(initMockReq, res);
+      }).removeItemFromCart(initMockReq, res, mockNext);
+
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
+      expect(res.json).toHaveBeenCalledWith({
+        message: CART_MESSAGES.CART_ITEM_NOT_FOUND,
+      });
+    });
+
+    it("should return a status not found if cart item remove failed", async () => {
+      mockCartItemRepository.findOne.mockResolvedValue(
+        CART_ITEM as unknown as CartItem,
+      );
+      mockCartItemRepository.remove.mockResolvedValue(null);
+
+      await cartController({
+        cartRepository: mockCartRepository,
+        userRepository: mockUserRepository,
+        dishRepository: mockDishRepository,
+        cartItemRepository: mockCartItemRepository,
+      }).removeItemFromCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -420,7 +493,7 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).removeItemFromCart(initMockReq, res);
+      }).removeItemFromCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith({
@@ -438,14 +511,11 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: mockCartItemRepository,
-      }).removeItemFromCart(initMockReq, res);
+      }).removeItemFromCart(initMockReq, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 
@@ -459,6 +529,7 @@ describe("Cart Controller", () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     } as unknown as Response;
+    const mockNext = jest.fn();
 
     it("should return a status not found if cart is not found", async () => {
       mockCartRepository.findOne.mockResolvedValue(null);
@@ -468,7 +539,7 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: {} as Repository<CartItem>,
-      }).checkoutCart(initMockReq, res);
+      }).checkoutCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -485,13 +556,30 @@ describe("Cart Controller", () => {
         userRepository: mockUserRepository,
         dishRepository: mockDishRepository,
         cartItemRepository: {} as Repository<CartItem>,
-      }).checkoutCart(initMockReq, res);
+      }).checkoutCart(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith({
         message: CART_MESSAGES.CHECKOUT_SUCCESS,
         cart: CART,
       });
+    });
+
+    it("should return an internal server error", async () => {
+      mockCartRepository.findOne.mockRejectedValue(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
+      );
+
+      await cartController({
+        cartRepository: mockCartRepository,
+        userRepository: mockUserRepository,
+        dishRepository: mockDishRepository,
+        cartItemRepository: {} as Repository<CartItem>,
+      }).checkoutCart(initMockReq, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
+      );
     });
   });
 });
