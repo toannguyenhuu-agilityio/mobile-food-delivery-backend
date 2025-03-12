@@ -20,3 +20,9 @@ export interface IUser {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IUserRequest {
+  user: {
+    email: string;
+  };
+}

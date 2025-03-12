@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { Repository } from "typeorm";
 
 // Entities
@@ -16,16 +16,11 @@ import { USER } from "../../__mocks__/user.ts";
 
 // Constants
 import { STATUS_CODES } from "../../constants/httpStatusCodes.ts";
-import {
-  AUTH_MESSAGES,
-  GENERAL_MESSAGES,
-  USER_MESSAGES,
-} from "../../constants/messages.ts";
+import { AUTH_MESSAGES, USER_MESSAGES } from "../../constants/messages.ts";
 import { AuthenticationClient } from "auth0";
 
 // Types
 import { UserRole } from "../../types/user.ts";
-import { mock } from "node:test";
 
 jest.mock("../../services/userService.ts");
 jest.mock("../../services/auth0Service.ts");
@@ -379,6 +374,12 @@ describe("userController", () => {
   });
 
   describe("getUser", () => {
+    let mockNext: NextFunction;
+
+    beforeEach(() => {
+      mockNext = jest.fn();
+    });
+
     afterEach(() => {
       jest.clearAllMocks();
     });
@@ -396,7 +397,7 @@ describe("userController", () => {
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
         userService: mockUserService as unknown as typeof userService,
-      }).getUsers(req, res);
+      }).getUsers(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -418,7 +419,7 @@ describe("userController", () => {
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
         userService: mockUserService as unknown as typeof userService,
-      }).getUsers(req, res);
+      }).getUsers(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith({
@@ -442,18 +443,19 @@ describe("userController", () => {
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
         userService: mockUserService as unknown as typeof userService,
-      }).getUsers(req, res);
+      }).getUsers(req, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
-      );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
+      expect(mockNext).toHaveBeenCalledWith(new Error("User creation failed"));
     });
   });
 
   describe("getUserById", () => {
+    let mockNext: NextFunction;
+
+    beforeEach(() => {
+      mockNext = jest.fn();
+    });
+
     afterEach(() => {
       jest.clearAllMocks();
     });
@@ -464,7 +466,7 @@ describe("userController", () => {
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
-      }).getUserById(req, res);
+      }).getUserById(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.BAD_REQUEST);
       expect(res.json).toHaveBeenCalledWith({
@@ -484,7 +486,27 @@ describe("userController", () => {
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
         userService: mockUserService as unknown as typeof userService,
-      }).getUserById(req, res);
+      }).getUserById(req, res, mockNext);
+
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
+      expect(res.json).toHaveBeenCalledWith({
+        message: USER_MESSAGES.USER_NOT_FOUND,
+      });
+    });
+
+    it("should return status not found if user is not found", async () => {
+      const { req, res } = createMockReqRes({}, { id: "1" });
+
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
+      await userController({
+        userRepository: mockUserRepository,
+        authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
+      }).getUserById(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -505,7 +527,7 @@ describe("userController", () => {
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
         userService: mockUserService as unknown as typeof userService,
-      }).getUserById(req, res);
+      }).getUserById(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith(USER);
@@ -526,14 +548,9 @@ describe("userController", () => {
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
         userService: mockUserService as unknown as typeof userService,
-      }).getUserById(req, res);
+      }).getUserById(req, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
-      );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
+      expect(mockNext).toHaveBeenCalledWith(new Error("User creation failed"));
     });
   });
 });

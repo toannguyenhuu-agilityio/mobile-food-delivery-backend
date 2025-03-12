@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { DataSource, Repository } from "typeorm";
 
 // Entities
@@ -26,24 +26,7 @@ import { ORDER, ORDER_REQUEST } from "../../__mocks__/order.ts";
 import { User } from "../../entities/user.ts";
 import { Cart } from "../../entities/cart.ts";
 import { CART } from "../../__mocks__/cart.ts";
-
-const mockOrderRepository = {
-  findOne: jest.fn(),
-  create: jest.fn(),
-  save: jest.fn(),
-  find: jest.fn(),
-  update: jest.fn(),
-  remove: jest.fn(),
-  findAndCount: jest.fn(),
-} as unknown as jest.Mocked<Repository<Order>>;
-
-const mockOrderItemRepository = {
-  create: jest.fn(),
-  save: jest.fn(),
-  find: jest.fn(),
-  findOne: jest.fn(),
-  update: jest.fn(),
-} as unknown as jest.Mocked<Repository<OrderItem>>;
+import { IUserRequest } from "../../types/user.ts";
 
 const mockDataSource = {
   create: jest.fn(),
@@ -54,12 +37,42 @@ const mockDataSource = {
   createQueryRunner: jest.fn(),
 } as unknown as DataSource;
 
-describe("Order Controller", () => {
-  let req: Request;
-  let res: Response;
-  let queryRunnerMock: any;
+const mockQueryBuilder = {
+  innerJoin: jest.fn().mockReturnThis(),
+  leftJoinAndSelect: jest.fn().mockReturnThis(),
+  where: jest.fn().mockReturnThis(),
+  andWhere: jest.fn().mockReturnThis(),
+  skip: jest.fn().mockReturnThis(),
+  take: jest.fn().mockReturnThis(),
+  getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+};
 
+const mockOrderRepository = {
+  findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  find: jest.fn(),
+  update: jest.fn(),
+  remove: jest.fn(),
+  findAndCount: jest.fn(),
+  createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+} as unknown as jest.Mocked<Repository<Order>>;
+
+const mockOrderItemRepository = {
+  create: jest.fn(),
+  save: jest.fn(),
+  find: jest.fn(),
+  findOne: jest.fn(),
+  update: jest.fn(),
+} as unknown as jest.Mocked<Repository<OrderItem>>;
+
+describe("Order Controller", () => {
   describe("createOrder", () => {
+    let req: Request;
+    let res: Response;
+    let queryRunnerMock: any;
+    let mockNext: NextFunction;
+
     beforeEach(() => {
       req = ORDER_REQUEST as unknown as Request;
       res = {
@@ -78,6 +91,7 @@ describe("Order Controller", () => {
           save: jest.fn(),
         },
       };
+      mockNext = jest.fn() as NextFunction;
 
       (mockDataSource.createQueryRunner as jest.Mock).mockReturnValue(
         queryRunnerMock,
@@ -95,7 +109,7 @@ describe("Order Controller", () => {
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).createOrder(req, res);
+      }).createOrder(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -117,7 +131,7 @@ describe("Order Controller", () => {
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).createOrder(req, res);
+      }).createOrder(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -154,7 +168,7 @@ describe("Order Controller", () => {
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).createOrder(mockReq, res);
+      }).createOrder(mockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.CREATED);
       expect(res.json).toHaveBeenCalledWith(ORDER);
@@ -169,25 +183,34 @@ describe("Order Controller", () => {
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).createOrder(req, res);
+      }).createOrder(req, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
-      );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
+      expect(mockNext).toHaveBeenCalledWith(new Error("Some error occurred"));
     });
   });
 
   describe("getOrderById", () => {
+    let req: Request;
+    let res: Response;
+    let mockNext: NextFunction;
+
     beforeEach(() => {
-      req = ORDER_REQUEST as unknown as Request;
+      req = {
+        params: {
+          orderId: "1",
+        },
+      } as unknown as Request;
       res = {
         status: jest.fn().mockReturnThis(),
         json: jest.fn(),
       } as unknown as Response;
+      mockNext = jest.fn();
     });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
     it("should return a status not found if order is not found", async () => {
       mockOrderRepository.findOne.mockResolvedValue(null);
 
@@ -195,7 +218,7 @@ describe("Order Controller", () => {
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).getOrderById(req, res);
+      }).getOrderById(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -210,7 +233,7 @@ describe("Order Controller", () => {
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).getOrderById(req, res);
+      }).getOrderById(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith(ORDER);
@@ -225,24 +248,151 @@ describe("Order Controller", () => {
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).getOrderById(req, res);
+      }).getOrderById(req, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 
-  describe("updateOrderStatus", () => {
+  describe("getOrders", () => {
+    let req: Request & IUserRequest;
+    let res: Response;
+    let mockNext: NextFunction;
+
     beforeEach(() => {
-      req = ORDER_REQUEST as unknown as Request;
+      req = ORDER_REQUEST as unknown as Request & IUserRequest;
       res = {
         status: jest.fn().mockReturnThis(),
         json: jest.fn(),
       } as unknown as Response;
+      mockNext = jest.fn();
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should return a status bad request if order status is invalid   ", async () => {
+      req = {
+        ...req,
+        query: {
+          ...ORDER_REQUEST.query,
+          status: "invalid",
+        },
+      } as unknown as Request & IUserRequest;
+
+      await orderController({
+        dataSource: mockDataSource,
+        orderRepository: mockOrderRepository,
+        orderItemRepository: mockOrderItemRepository,
+      }).getOrders(req, res, mockNext);
+
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.BAD_REQUEST);
+      expect(res.json).toHaveBeenCalledWith({
+        message: ORDER_MESSAGES.INVALID_ORDER_STATUS,
+      });
+    });
+
+    it("should return a status bad request if page and limit are invalid", async () => {
+      req = {
+        ...req,
+        query: {
+          status: OrderStatus.Pending,
+          page: -1,
+          limit: -1,
+        },
+      } as unknown as Request & IUserRequest;
+
+      await orderController({
+        dataSource: mockDataSource,
+        orderRepository: mockOrderRepository,
+        orderItemRepository: mockOrderItemRepository,
+      }).getOrders(req, res, mockNext);
+
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.BAD_REQUEST);
+      expect(res.json).toHaveBeenCalledWith({
+        message: ORDER_MESSAGES.INVALID_PAGE_AND_LIMIT,
+      });
+    });
+
+    it("should return a status not found if no orders are found", async () => {
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await orderController({
+        dataSource: mockDataSource,
+        orderRepository: mockOrderRepository,
+        orderItemRepository: mockOrderItemRepository,
+      }).getOrders(req, res, mockNext);
+
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
+      expect(res.json).toHaveBeenCalledWith({
+        message: ORDER_MESSAGES.ORDER_NOT_FOUND,
+      });
+    });
+
+    it("should return a status ok if orders are found", async () => {
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[ORDER], 1]);
+
+      await orderController({
+        dataSource: mockDataSource,
+        orderRepository: mockOrderRepository,
+        orderItemRepository: mockOrderItemRepository,
+      }).getOrders(req, res, mockNext);
+
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
+      expect(res.json).toHaveBeenCalledWith({
+        data: [ORDER],
+        pagination: {
+          page: 1,
+          limit: 10,
+          totalItems: 1,
+          totalPages: 1,
+        },
+      });
+    });
+
+    it("should return a status internal server error", async () => {
+      mockQueryBuilder.getManyAndCount.mockRejectedValue(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
+      );
+
+      await orderController({
+        dataSource: mockDataSource,
+        orderRepository: mockOrderRepository,
+        orderItemRepository: mockOrderItemRepository,
+      }).getOrders(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
+      );
+    });
+  });
+
+  describe("updateOrderStatus", () => {
+    let req: Request;
+    let res: Response;
+    let mockNext: NextFunction;
+
+    beforeEach(() => {
+      req = {
+        params: {
+          orderId: "1",
+        },
+        body: {
+          status: OrderStatus.Delivered,
+        },
+      } as unknown as Request;
+      res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as unknown as Response;
+      mockNext = jest.fn();
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
     });
 
     it("should return a status not found if order is not found", async () => {
@@ -252,7 +402,7 @@ describe("Order Controller", () => {
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).getOrderById(req, res);
+      }).updateOrderStatus(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -271,7 +421,7 @@ describe("Order Controller", () => {
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).updateOrderStatus(req, res);
+      }).updateOrderStatus(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith({
@@ -288,119 +438,11 @@ describe("Order Controller", () => {
         dataSource: mockDataSource,
         orderRepository: mockOrderRepository,
         orderItemRepository: mockOrderItemRepository,
-      }).updateOrderStatus(req, res);
+      }).updateOrderStatus(req, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
-    });
-  });
-
-  describe("getOrders", () => {
-    beforeEach(() => {
-      req = ORDER_REQUEST as unknown as Request;
-      res = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      } as unknown as Response;
-    });
-
-    it("should return a status bad request if order status is invalid   ", async () => {
-      req = { ...req, query: { status: "invalid" } } as unknown as Request;
-
-      await orderController({
-        dataSource: mockDataSource,
-        orderRepository: mockOrderRepository,
-        orderItemRepository: mockOrderItemRepository,
-      }).getOrders(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.BAD_REQUEST);
-      expect(res.json).toHaveBeenCalledWith({
-        message: ORDER_MESSAGES.INVALID_ORDER_STATUS,
-      });
-    });
-
-    it("should return a status bad request if page and limit are invalid", async () => {
-      req = {
-        ...req,
-        query: {
-          status: OrderStatus.Pending,
-          page: -1,
-          limit: -1,
-        },
-      } as unknown as Request;
-
-      await orderController({
-        dataSource: mockDataSource,
-        orderRepository: mockOrderRepository,
-        orderItemRepository: mockOrderItemRepository,
-      }).getOrders(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.BAD_REQUEST);
-      expect(res.json).toHaveBeenCalledWith({
-        message: ORDER_MESSAGES.INVALID_PAGE_AND_LIMIT,
-      });
-    });
-
-    it("should return a status not found if no orders are found", async () => {
-      mockOrderRepository.findAndCount.mockResolvedValue([[], 0]);
-
-      await orderController({
-        dataSource: mockDataSource,
-        orderRepository: mockOrderRepository,
-        orderItemRepository: mockOrderItemRepository,
-      }).getOrders(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
-      expect(res.json).toHaveBeenCalledWith({
-        message: ORDER_MESSAGES.ORDER_NOT_FOUND,
-      });
-    });
-
-    it("should return a status ok if orders are found", async () => {
-      mockOrderRepository.findAndCount.mockResolvedValue([
-        [ORDER as unknown as Order],
-        1,
-      ]);
-
-      await orderController({
-        dataSource: mockDataSource,
-        orderRepository: mockOrderRepository,
-        orderItemRepository: mockOrderItemRepository,
-      }).getOrders(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
-      expect(res.json).toHaveBeenCalledWith({
-        data: [ORDER],
-        pagination: {
-          page: 1,
-          limit: 10,
-          totalItems: 1,
-          totalPages: 1,
-        },
-      });
-    });
-
-    it("should return a status internal server error", async () => {
-      mockOrderRepository.findAndCount.mockRejectedValue(
-        new Error("Internal server error"),
-      );
-
-      await orderController({
-        dataSource: mockDataSource,
-        orderRepository: mockOrderRepository,
-        orderItemRepository: mockOrderItemRepository,
-      }).getOrders(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
-      );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 });

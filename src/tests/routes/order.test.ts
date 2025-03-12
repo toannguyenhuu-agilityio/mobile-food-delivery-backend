@@ -77,7 +77,7 @@ describe("Order Routes", () => {
       res.status(STATUS_CODES.CREATED).json(ORDER);
     });
 
-    const response = await request(app).post("/order").send(ORDER);
+    const response = await request(app).post("/orders").send(ORDER);
 
     expect(response.status).toBe(STATUS_CODES.CREATED);
     expect(response.body).toEqual(ORDER);
@@ -89,7 +89,7 @@ describe("Order Routes", () => {
       res.status(STATUS_CODES.OK).json(ORDER);
     });
 
-    const response = await request(app).get("/order/1");
+    const response = await request(app).get("/orders/1");
 
     expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual(ORDER);
@@ -101,7 +101,7 @@ describe("Order Routes", () => {
       res.status(STATUS_CODES.OK).json([ORDER]);
     });
 
-    const response = await request(app).get("/orders/1");
+    const response = await request(app).get("/orders");
 
     expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual([ORDER]);
@@ -115,7 +115,7 @@ describe("Order Routes", () => {
         .json({ ...ORDER, status: OrderStatus.Delivered });
     });
 
-    const response = await request(app).put("/order/1");
+    const response = await request(app).put("/orders/1");
 
     expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual({

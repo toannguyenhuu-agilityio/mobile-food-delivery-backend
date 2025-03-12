@@ -44,7 +44,6 @@ const ORDER = {
 };
 
 const ORDER_REQUEST = {
-  params: { userId: "1" },
   body: {
     id: "1",
     status: OrderStatus.Delivered,
@@ -58,8 +57,9 @@ const ORDER_REQUEST = {
   query: {
     page: "1",
     limit: "10",
-    status: "pending",
+    status: OrderStatus.Pending,
   },
+  user: { email: "userTest@gmail.com" },
 };
 
 export { ORDER, ORDER_REQUEST };

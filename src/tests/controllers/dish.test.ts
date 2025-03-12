@@ -1,4 +1,4 @@
-import express from "express";
+import { NextFunction, Request, Response } from "express";
 import { DeleteResult, Repository } from "typeorm";
 
 // Entities
@@ -48,11 +48,12 @@ describe("Dish Controller", () => {
   });
 
   describe("createDish", () => {
-    const initMockReq = DISH_REQUEST as unknown as express.Request;
+    const initMockReq = DISH_REQUEST as unknown as Request;
     const res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
-    } as unknown as express.Response;
+    } as unknown as Response;
+    const mockNext = jest.fn() as NextFunction;
 
     it("should return a bad request response and message missing required fields", async () => {
       const mockReq = {
@@ -60,12 +61,12 @@ describe("Dish Controller", () => {
           ...initMockReq.body,
           name: "",
         },
-      } as unknown as express.Request;
+      } as unknown as Request;
 
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).createDish(mockReq, res);
+      }).createDish(mockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.BAD_REQUEST);
       expect(res.json).toHaveBeenCalledWith({
@@ -79,12 +80,12 @@ describe("Dish Controller", () => {
           ...initMockReq.body,
           userId: 2,
         },
-      } as unknown as express.Request;
+      } as unknown as Request;
 
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).createDish(mockReq, res);
+      }).createDish(mockReq, res, mockNext);
 
       mockUserRepository.findOne.mockResolvedValue(null);
 
@@ -100,7 +101,7 @@ describe("Dish Controller", () => {
           ...initMockReq.body,
           role: UserRole.Customer,
         },
-      } as unknown as express.Request;
+      } as unknown as Request;
 
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
@@ -110,7 +111,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).createDish(mockReq, res);
+      }).createDish(mockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.FORBIDDEN);
       expect(res.json).toHaveBeenCalledWith({
@@ -119,7 +120,7 @@ describe("Dish Controller", () => {
     });
 
     it("should return a status created", async () => {
-      const mockReq = DISH_REQUEST as unknown as express.Request;
+      const mockReq = DISH_REQUEST as unknown as Request;
 
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
@@ -137,14 +138,14 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).createDish(mockReq, res);
+      }).createDish(mockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.CREATED);
       expect(res.json).toHaveBeenCalledWith(DISH);
     });
 
     it("should return a status internal server error", async () => {
-      const mockReq = DISH_REQUEST as unknown as express.Request;
+      const mockReq = DISH_REQUEST as unknown as Request;
 
       mockUserRepository.findOne.mockResolvedValue({
         ...USER,
@@ -158,32 +159,31 @@ describe("Dish Controller", () => {
       } as unknown as Dish);
 
       mockDishRepository.save.mockRejectedValue(
-        new Error("Internal server error"),
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
 
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).createDish(mockReq, res);
+      }).createDish(mockReq, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 
   describe("getDishByID", () => {
     const initMockReq = {
       params: { id: "1" },
-    } as unknown as express.Request;
+    } as unknown as Request;
 
     const res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
-    } as unknown as express.Response;
+    } as unknown as Response;
+
+    const mockNext = jest.fn() as NextFunction;
 
     it("should return a status not found", async () => {
       mockDishRepository.findOneBy.mockResolvedValue(null);
@@ -191,7 +191,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).getDishByID(initMockReq, res);
+      }).getDishByID(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -205,7 +205,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).getDishByID(initMockReq, res);
+      }).getDishByID(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith(DISH);
@@ -213,20 +213,17 @@ describe("Dish Controller", () => {
 
     it("should return a status internal server error", async () => {
       mockDishRepository.findOneBy.mockRejectedValue(
-        new Error("Internal server error"),
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
 
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).getDishByID(initMockReq, res);
+      }).getDishByID(initMockReq, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 
@@ -236,12 +233,13 @@ describe("Dish Controller", () => {
       body: {
         name: "test",
       },
-    } as unknown as express.Request;
+    } as unknown as Request;
 
     const res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
-    } as unknown as express.Response;
+    } as unknown as Response;
+    const mockNext = jest.fn() as NextFunction;
 
     it("should return a status not found  when user is not found", async () => {
       mockDishRepository.findOneBy.mockResolvedValue(DISH as unknown as Dish);
@@ -250,7 +248,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).updateDishByID(initMockReq, res);
+      }).updateDishByID(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -268,7 +266,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).updateDishByID(initMockReq, res);
+      }).updateDishByID(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.FORBIDDEN);
       expect(res.json).toHaveBeenCalledWith({
@@ -291,7 +289,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).updateDishByID(initMockReq, res);
+      }).updateDishByID(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -318,7 +316,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).updateDishByID(initMockReq, res);
+      }).updateDishByID(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith(updatedDish);
@@ -332,20 +330,17 @@ describe("Dish Controller", () => {
       } as unknown as User);
 
       mockDishRepository.findOneBy.mockRejectedValue(
-        new Error("Internal server error"),
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
 
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).updateDishByID(initMockReq, res);
+      }).updateDishByID(initMockReq, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 
@@ -355,12 +350,13 @@ describe("Dish Controller", () => {
       body: {
         userId: "1",
       },
-    } as unknown as express.Request;
+    } as unknown as Request;
 
     const res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
-    } as unknown as express.Response;
+    } as unknown as Response;
+    const mockNext = jest.fn() as NextFunction;
 
     it("should return a status not found  when user is not found", async () => {
       mockDishRepository.findOneBy.mockResolvedValue(DISH as unknown as Dish);
@@ -369,7 +365,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).deleteDishByID(initMockReq, res);
+      }).deleteDishByID(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -387,7 +383,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).deleteDishByID(initMockReq, res);
+      }).deleteDishByID(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.FORBIDDEN);
       expect(res.json).toHaveBeenCalledWith({
@@ -412,7 +408,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).deleteDishByID(initMockReq, res);
+      }).deleteDishByID(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
@@ -433,7 +429,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).deleteDishByID(initMockReq, res);
+      }).deleteDishByID(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith({
@@ -448,20 +444,17 @@ describe("Dish Controller", () => {
       } as unknown as User);
 
       mockDishRepository.delete.mockRejectedValue(
-        new Error("Internal server error"),
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
 
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).deleteDishByID(initMockReq, res); // Simulate the deleteDishByID function
+      }).deleteDishByID(initMockReq, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 
@@ -472,11 +465,12 @@ describe("Dish Controller", () => {
         page: "1",
         limit: "10",
       },
-    } as unknown as express.Request;
+    } as unknown as Request;
     const res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
-    } as unknown as express.Response;
+    } as unknown as Response;
+    const mockNext = jest.fn() as NextFunction;
 
     it("should return a bad request response when category is invalid", async () => {
       const mockReq = {
@@ -485,11 +479,11 @@ describe("Dish Controller", () => {
           ...initMockReq.query,
           category: "invalid",
         },
-      } as unknown as express.Request;
+      } as unknown as Request;
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).getDishes(mockReq, res);
+      }).getDishes(mockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.BAD_REQUEST);
       expect(res.json).toHaveBeenCalledWith({
@@ -505,11 +499,11 @@ describe("Dish Controller", () => {
           page: -1,
           limit: -1,
         },
-      } as unknown as express.Request;
+      } as unknown as Request;
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).getDishes(mockReq, res);
+      }).getDishes(mockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.BAD_REQUEST);
       expect(res.json).toHaveBeenCalledWith({
@@ -526,7 +520,7 @@ describe("Dish Controller", () => {
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).getDishes(initMockReq, res);
+      }).getDishes(initMockReq, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
       expect(res.json).toHaveBeenCalledWith({
@@ -542,20 +536,17 @@ describe("Dish Controller", () => {
 
     it("should return a status internal server error", async () => {
       mockDishRepository.findAndCount.mockRejectedValue(
-        new Error("Internal server error"),
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
 
       await dishController({
         dishRepository: mockDishRepository,
         userRepository: mockUserRepository,
-      }).getDishes(initMockReq, res);
+      }).getDishes(initMockReq, res, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(
-        STATUS_CODES.INTERNAL_SERVER_ERROR,
+      expect(mockNext).toHaveBeenCalledWith(
+        new Error(GENERAL_MESSAGES.INTERNAL_SERVER_ERROR),
       );
-      expect(res.json).toHaveBeenCalledWith({
-        message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR,
-      });
     });
   });
 });

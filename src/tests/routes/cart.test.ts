@@ -99,7 +99,7 @@ describe("Cart Routes", () => {
         .json({ message: CART_MESSAGES.CART_CREATED });
     });
 
-    const response = await request(app).post("/cart").send(CART);
+    const response = await request(app).post("/carts").send(CART);
 
     expect(response.status).toBe(STATUS_CODES.CREATED);
     expect(response.body).toEqual({ message: CART_MESSAGES.CART_CREATED });
@@ -111,7 +111,7 @@ describe("Cart Routes", () => {
       res.status(STATUS_CODES.OK).json(CART);
     });
 
-    const response = await request(app).get(`/cart/${USER.id}`);
+    const response = await request(app).get(`/carts`);
 
     expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual(CART);
@@ -123,7 +123,7 @@ describe("Cart Routes", () => {
       res.status(STATUS_CODES.CREATED).json(CART_ITEM);
     });
 
-    const response = await request(app).post("/cart/1/item").send(CART_ITEM);
+    const response = await request(app).post("/cartItems").send(CART_ITEM);
 
     expect(response.status).toBe(STATUS_CODES.CREATED);
     expect(response.body).toEqual(CART_ITEM);
@@ -135,7 +135,7 @@ describe("Cart Routes", () => {
       res.status(STATUS_CODES.OK).json(CART_ITEM);
     });
 
-    const response = await request(app).put("/cart/1/item/1").send(CART_ITEM);
+    const response = await request(app).put("/cartItems/1").send(CART_ITEM);
 
     expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual(CART_ITEM);
@@ -147,7 +147,7 @@ describe("Cart Routes", () => {
       res.status(STATUS_CODES.OK).json({ message: "Item removed from cart" });
     });
 
-    const response = await request(app).delete("/cart/1/item/1");
+    const response = await request(app).delete("/cartItems/1");
 
     expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual({ message: "Item removed from cart" });
@@ -159,7 +159,7 @@ describe("Cart Routes", () => {
       res.status(STATUS_CODES.OK).json({ message: "Cart checked out" });
     });
 
-    const response = await request(app).post("/cart/checkout");
+    const response = await request(app).post("/carts/checkout");
 
     expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual({ message: "Cart checked out" });

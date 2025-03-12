@@ -73,7 +73,7 @@ describe("Dish Routes", () => {
       res.status(STATUS_CODES.CREATED).json({ message: "Dish created" });
     });
 
-    const response = await request(app).post("/dish").send(DISH);
+    const response = await request(app).post("/dishes").send(DISH);
 
     expect(response.status).toBe(STATUS_CODES.CREATED);
     expect(response.body).toEqual({ message: "Dish created" });
@@ -97,7 +97,7 @@ describe("Dish Routes", () => {
       res.status(STATUS_CODES.OK).json({ message: "Get dish by ID" });
     });
 
-    const response = await request(app).get("/dish/1");
+    const response = await request(app).get("/dishes/1");
 
     expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual({ message: "Get dish by ID" });
@@ -109,7 +109,7 @@ describe("Dish Routes", () => {
       res.status(STATUS_CODES.OK).json({ message: "Dish updated" });
     });
 
-    const response = await request(app).put("/dish/1").send(DISH);
+    const response = await request(app).put("/dishes/1").send(DISH);
 
     expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual({ message: "Dish updated" });
@@ -121,7 +121,7 @@ describe("Dish Routes", () => {
       res.status(STATUS_CODES.OK).json({ message: "Dish deleted" });
     });
 
-    const response = await request(app).delete("/dish/1");
+    const response = await request(app).delete("/dishes/1");
 
     expect(response.status).toBe(STATUS_CODES.OK);
     expect(response.body).toEqual({ message: "Dish deleted" });

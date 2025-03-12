@@ -19,6 +19,7 @@ import { orderRoutes } from "./routes/order.ts";
 
 // Middlewares
 import { authClient } from "./middleware/auth0.middleware.ts";
+import { errorHandler } from "./middleware/errorHandling.middleware.ts";
 
 dotenv.config();
 
@@ -54,6 +55,9 @@ AppDataSource.initialize()
       orderRepository,
       orderItemRepository,
     });
+
+    // Error handler middleware
+    app.use(errorHandler);
 
     // start express server
     app.listen(port, () => {

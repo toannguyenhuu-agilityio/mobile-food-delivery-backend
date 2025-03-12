@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { Repository, DataSource } from "typeorm";
 
 // Entities
@@ -11,7 +11,6 @@ import { OrderStatus } from "../types/order.ts";
 
 // Constants
 import {
-  GENERAL_MESSAGES,
   ORDER_MESSAGES,
   USER_MESSAGES,
   CART_MESSAGES,
@@ -19,6 +18,7 @@ import {
 import { STATUS_CODES } from "../constants/httpStatusCodes.ts";
 import { CartStatus } from "../types/cart.ts";
 import { Cart } from "../entities/cart.ts";
+import { IUserRequest } from "../types/user.ts";
 
 export const orderController = ({
   dataSource,
@@ -34,17 +34,17 @@ export const orderController = ({
      * Creates a new order for the user.
      * @param {Object} req - The request object containing the user ID.
      * @param {Object} res - The response object.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the order is successfully created.
      * @throws {Error} - Throws an error if an unexpected issue occurs while creating the order.
      */
-    createOrder: async (req: Request, res: Response) => {
+    createOrder: async (req: Request, res: Response, next: NextFunction) => {
       const { userId } = req.body;
       const queryRunner = dataSource.createQueryRunner();
 
       try {
         // Start a transaction
-
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
@@ -110,14 +110,10 @@ export const orderController = ({
 
         res.status(STATUS_CODES.CREATED).json(newOrder);
       } catch (error) {
-        console.log("Error creating order:", error);
-
         // Rollback the transaction in case of an error
         await queryRunner.rollbackTransaction();
 
-        return res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       } finally {
         // Release the query runner
         await queryRunner.release();
@@ -128,11 +124,12 @@ export const orderController = ({
      * Retrieves an order by ID.
      * @param {Object} req - The request object containing the order ID.
      * @param {Object} res - The response object.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the order is successfully retrieved.
      * @throws {Error} - Throws an error if an unexpected issue occurs while retrieving the order.
      */
-    getOrderById: async (req: Request, res: Response) => {
+    getOrderById: async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { orderId } = req.params;
         const order = await orderRepository.findOne({
@@ -148,11 +145,7 @@ export const orderController = ({
 
         return res.status(STATUS_CODES.OK).json(order);
       } catch (error) {
-        console.log("Error retrieving order:", error);
-
-        return res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
 
@@ -160,11 +153,16 @@ export const orderController = ({
      * Retrieves all orders for the user.
      * @param {Object} req - The request object containing the user ID.
      * @param {Object} res - The response object.
+     * @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the orders are successfully retrieved.
      * @throws {Error} - Throws an error if an unexpected issue occurs while retrieving the orders.
      */
-    getOrders: async (req: Request, res: Response) => {
+    getOrders: async (
+      req: Request & IUserRequest,
+      res: Response,
+      next: NextFunction,
+    ) => {
       const { status, page, limit } = req.query;
       const statusQuery = (status as OrderStatus) || OrderStatus.Pending;
 
@@ -187,13 +185,19 @@ export const orderController = ({
       const skip = (pageQuery - 1) * limitQuery;
 
       try {
-        const { userId } = req.params;
-        const [orders, total = 0] = await orderRepository.findAndCount({
-          where: { user: { id: userId }, status: statusQuery },
-          relations: ["orderItems", "orderItems.dish"],
-          skip,
-          take: limitQuery,
-        });
+        const { email } = req.user;
+
+        const queryBuilder = orderRepository
+          .createQueryBuilder("order")
+          .innerJoin("order.user", "user")
+          .leftJoinAndSelect("order.orderItems", "orderItems")
+          .leftJoinAndSelect("orderItems.dish", "dish")
+          .where("user.email = :email", { email })
+          .andWhere("order.status = :status", { status: statusQuery })
+          .skip(skip)
+          .take(limitQuery);
+
+        const [orders, total] = await queryBuilder.getManyAndCount();
 
         // Check if no orders found
         if (!orders || orders.length === 0) {
@@ -214,11 +218,7 @@ export const orderController = ({
           },
         });
       } catch (error) {
-        console.log("Error retrieving orders:", error);
-
-        return res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
 
@@ -226,12 +226,17 @@ export const orderController = ({
      * Updates the status of an order.
      * @param {Object} req - The request object containing the order ID and new status.
      * @param {Object} res - The response object.
+     *  @param {Object} next - The next middleware function.
      *
      * @returns {Promise<void>} - A promise that resolves when the order status is successfully updated.
      * @throws {Error} - Throws an error if an unexpected issue occurs while updating the order status.
      *
      */
-    updateOrderStatus: async (req: Request, res: Response) => {
+    updateOrderStatus: async (
+      req: Request,
+      res: Response,
+      next: NextFunction,
+    ) => {
       try {
         const { orderId } = req.params;
         const { status } = req.body;
@@ -253,11 +258,7 @@ export const orderController = ({
           .status(STATUS_CODES.OK)
           .json({ message: ORDER_MESSAGES.ORDER_STATUS_UPDATED });
       } catch (error) {
-        console.log("Error updating order status:", error);
-
-        return res
-          .status(STATUS_CODES.INTERNAL_SERVER_ERROR)
-          .json({ message: GENERAL_MESSAGES.INTERNAL_SERVER_ERROR });
+        next(error);
       }
     },
   };
