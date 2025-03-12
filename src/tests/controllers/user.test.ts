@@ -1,12 +1,15 @@
 import { Request, Response } from "express";
 import { Repository } from "typeorm";
-import bcrypt from "bcryptjs";
 
 // Entities
 import { User } from "../../entities/user.ts";
 
 // Controllers
 import { userController } from "../../controllers/user.ts";
+
+// Services
+import { userService } from "../../services/userService.ts";
+import { auth0Service } from "../../services/auth0Service.ts";
 
 // Mocks
 import { USER } from "../../__mocks__/user.ts";
@@ -19,6 +22,13 @@ import {
   USER_MESSAGES,
 } from "../../constants/messages.ts";
 import { AuthenticationClient } from "auth0";
+
+// Types
+import { UserRole } from "../../types/user.ts";
+import { mock } from "node:test";
+
+jest.mock("../../services/userService.ts");
+jest.mock("../../services/auth0Service.ts");
 
 const mockUserRepository = {
   find: jest.fn(),
@@ -52,6 +62,16 @@ const createMockReqRes = (body: object = {}, params: object = {}) => {
   return { req, res };
 };
 
+const mockAuthService = jest.fn().mockReturnValue({
+  registerNewUser: jest.fn(),
+  getAccessToken: jest.fn(),
+});
+const mockUserService = jest.fn().mockReturnValue({
+  findUser: jest.fn(),
+  getAllUsers: jest.fn(),
+  createUser: jest.fn(),
+}) as unknown as typeof userService;
+
 describe("userController", () => {
   describe("signUp", () => {
     afterEach(() => {
@@ -78,16 +98,34 @@ describe("userController", () => {
 
     it("should return status conflict if user already exists", async () => {
       const { req, res } = createMockReqRes({
-        name: "User Test",
-        email: "usertest@example.com",
+        id: "1",
+        name: "John Doe",
+        email: "B4s8s@example.com",
         password: "password",
+        role: UserRole.Admin,
       });
 
       (mockUserRepository.findOne as jest.Mock).mockResolvedValue(USER);
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue({
+          email: "test@example.com",
+        }),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
+      mockAuthService.mockReturnValue({
+        registerNewUser: jest.fn().mockResolvedValue({
+          id: "newUserId",
+          name: "John Doe",
+          email: "B4s8s@example.com",
+        }),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
+        authService: mockAuthService as unknown as typeof auth0Service,
       }).signUp(req, res);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.CONFLICT);
@@ -105,10 +143,20 @@ describe("userController", () => {
 
       (mockUserRepository.findOne as jest.Mock).mockResolvedValue(null);
       (mockAuthClient.database.signUp as jest.Mock).mockResolvedValue(null);
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
+      mockAuthService.mockReturnValue({
+        registerNewUser: jest.fn().mockResolvedValue(null),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
+        authService: mockAuthService as unknown as typeof auth0Service,
       }).signUp(req, res);
 
       expect(res.status).toHaveBeenCalledWith(
@@ -130,17 +178,24 @@ describe("userController", () => {
       (mockAuthClient.database.signUp as jest.Mock).mockResolvedValue({
         data: { _id: "auth0_user_id" },
       });
-      (mockUserRepository.create as jest.Mock).mockReturnValue(USER);
-      (mockUserRepository.save as jest.Mock).mockRejectedValue(
-        new Error("Database error"),
-      );
-
-      // Mock bcrypt hashing
-      bcrypt.hash = jest.fn().mockResolvedValue("hashed_password");
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+        getAllUsers: jest.fn(),
+        createUser: jest
+          .fn()
+          .mockRejectedValue(new Error("User creation failed")),
+      });
+      mockAuthService.mockReturnValue({
+        registerNewUser: jest.fn().mockResolvedValue({
+          data: { _id: "auth0_user_id" },
+        }),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
+        authService: mockAuthService as unknown as typeof auth0Service,
       }).signUp(req, res);
 
       expect(res.status).toHaveBeenCalledWith(
@@ -164,27 +219,28 @@ describe("userController", () => {
           _id: "auth0_user_id",
         },
       });
-      (mockUserRepository.create as jest.Mock).mockReturnValue(USER);
-      (mockUserRepository.save as jest.Mock).mockResolvedValue(USER);
-
-      // Mock bcrypt hashing
-      bcrypt.hash = jest.fn().mockResolvedValue("hashed_password");
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn().mockResolvedValue(USER),
+      });
+      mockAuthService.mockReturnValue({
+        registerNewUser: jest.fn().mockResolvedValue({
+          data: { _id: "auth0_user_id" },
+        }),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
+        authService: mockAuthService as unknown as typeof auth0Service,
       }).signUp(req, res);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.CREATED);
       expect(res.json).toHaveBeenCalledWith({
         message: AUTH_MESSAGES.SIGNUP_SUCCESS,
-        user: {
-          id: USER.id,
-          name: USER.name,
-          email: USER.email,
-          role: USER.role,
-          dish: [],
-        },
+        user: USER,
       });
     });
   });
@@ -208,6 +264,33 @@ describe("userController", () => {
       });
     });
 
+    it("should return status not found if user not found", async () => {
+      const { req, res } = createMockReqRes({
+        email: "usertest@example.com",
+        password: "password",
+      });
+
+      mockAuthService.mockReturnValue({
+        registerNewUser: jest.fn().mockResolvedValue(null),
+        getAccessToken: jest.fn().mockResolvedValue(null),
+      });
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+      });
+
+      await userController({
+        userRepository: mockUserRepository,
+        authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
+        authService: mockAuthService as unknown as typeof auth0Service,
+      }).signIn(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
+      expect(res.json).toHaveBeenCalledWith({
+        message: AUTH_MESSAGES.USER_NOT_FOUND,
+      });
+    });
+
     it("should sign in a user successfully and return access token", async () => {
       const { req, res } = createMockReqRes({
         email: "usertest@example.com",
@@ -219,11 +302,19 @@ describe("userController", () => {
           id_token: "access_token",
         },
       });
-      (mockUserRepository.findOneBy as jest.Mock).mockResolvedValue(USER);
+      mockAuthService.mockReturnValue({
+        registerNewUser: jest.fn().mockResolvedValue(null),
+        getAccessToken: jest.fn().mockResolvedValue("access_token"),
+      });
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(USER),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
+        authService: mockAuthService as unknown as typeof auth0Service,
       }).signIn(req, res);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
@@ -242,10 +333,19 @@ describe("userController", () => {
       (mockAuthClient.oauth.passwordGrant as jest.Mock).mockResolvedValue({
         data: {},
       });
+      mockAuthService.mockReturnValue({
+        registerNewUser: jest.fn().mockResolvedValue(null),
+        getAccessToken: jest.fn().mockResolvedValue(null),
+      });
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(USER),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        authService: mockAuthService as unknown as typeof auth0Service,
+        userService: mockUserService as unknown as typeof userService,
       }).signIn(req, res);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.UNAUTHORIZED);
@@ -286,43 +386,62 @@ describe("userController", () => {
     it("should return status not found if user is not found", async () => {
       const { req, res } = createMockReqRes();
 
-      (mockUserRepository.find as jest.Mock).mockResolvedValue([]);
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+        getAllUsers: jest.fn().mockResolvedValue([]),
+        createUser: jest.fn(),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
       }).getUsers(req, res);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
       expect(res.json).toHaveBeenCalledWith({
         message: USER_MESSAGES.USER_NOT_FOUND,
+        users: [],
       });
     });
 
     it("should get all users successfully", async () => {
       const { req, res } = createMockReqRes();
 
-      (mockUserRepository.find as jest.Mock).mockResolvedValue([USER]);
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+        getAllUsers: jest.fn().mockResolvedValue([USER]),
+        createUser: jest.fn(),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
       }).getUsers(req, res);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
-      expect(res.json).toHaveBeenCalledWith([USER]);
+      expect(res.json).toHaveBeenCalledWith({
+        message: USER_MESSAGES.USERS_FETCHED,
+        users: [USER],
+      });
     });
 
     it("should return status internal server error if an error occurs", async () => {
       const { req, res } = createMockReqRes();
 
-      (mockUserRepository.find as jest.Mock).mockRejectedValue(
-        new Error("Database error"),
-      );
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+        getAllUsers: jest
+          .fn()
+          .mockRejectedValue(new Error("User creation failed")),
+        createUser: jest.fn(),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
       }).getUsers(req, res);
 
       expect(res.status).toHaveBeenCalledWith(
@@ -339,14 +458,32 @@ describe("userController", () => {
       jest.clearAllMocks();
     });
 
-    it("should return status not found if user is not found", async () => {
-      const { req, res } = createMockReqRes({}, { id: "1" });
-
-      (mockUserRepository.findOneBy as jest.Mock).mockResolvedValue(null);
+    it("should return status bad request if ID is not provided", async () => {
+      const { req, res } = createMockReqRes();
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+      }).getUserById(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.BAD_REQUEST);
+      expect(res.json).toHaveBeenCalledWith({
+        message: USER_MESSAGES.INVALID_USER_ID,
+      });
+    });
+
+    it("should return status not found if user is not found", async () => {
+      const { req, res } = createMockReqRes({}, { id: "1" });
+
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
+      await userController({
+        userRepository: mockUserRepository,
+        authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
       }).getUserById(req, res);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
@@ -358,11 +495,16 @@ describe("userController", () => {
     it("should get user by ID successfully", async () => {
       const { req, res } = createMockReqRes({}, { id: "1" });
 
-      (mockUserRepository.findOneBy as jest.Mock).mockResolvedValue(USER);
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(USER),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
       }).getUserById(req, res);
 
       expect(res.status).toHaveBeenCalledWith(STATUS_CODES.OK);
@@ -372,13 +514,18 @@ describe("userController", () => {
     it("should return status internal server error", async () => {
       const { req, res } = createMockReqRes({}, { id: "1" });
 
-      (mockUserRepository.findOneBy as jest.Mock).mockRejectedValue(
-        new Error(),
-      );
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest
+          .fn()
+          .mockRejectedValue(new Error("User creation failed")),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
 
       await userController({
         userRepository: mockUserRepository,
         authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
       }).getUserById(req, res);
 
       expect(res.status).toHaveBeenCalledWith(

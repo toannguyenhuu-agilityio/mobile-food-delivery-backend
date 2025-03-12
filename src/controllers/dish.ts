@@ -67,7 +67,7 @@ export const dishController = ({
         }
 
         // Optional: Check if the user is an admin
-        if (user.role !== UserRole.admin) {
+        if (user.role !== UserRole.Admin) {
           return res
             .status(STATUS_CODES.FORBIDDEN)
             .json({ message: USER_MESSAGES.ADMIN_ONLY });
@@ -160,7 +160,7 @@ export const dishController = ({
         }
 
         // Optional: Check if the user is an admin
-        if (user.role !== UserRole.admin) {
+        if (user.role !== UserRole.Admin) {
           return res
             .status(STATUS_CODES.FORBIDDEN)
             .json({ message: USER_MESSAGES.ADMIN_ONLY });
@@ -216,7 +216,7 @@ export const dishController = ({
         }
 
         // Optional: Check if the user is an admin
-        if (user.role !== UserRole.admin) {
+        if (user.role !== UserRole.Admin) {
           return res
             .status(STATUS_CODES.FORBIDDEN)
             .json({ message: USER_MESSAGES.ADMIN_ONLY });
