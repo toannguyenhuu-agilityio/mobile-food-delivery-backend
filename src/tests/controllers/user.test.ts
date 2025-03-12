@@ -494,6 +494,26 @@ describe("userController", () => {
       });
     });
 
+    it("should return status not found if user is not found", async () => {
+      const { req, res } = createMockReqRes({}, { id: "1" });
+
+      (mockUserService as jest.Mock).mockReturnValue({
+        findUser: jest.fn().mockResolvedValue(null),
+        getAllUsers: jest.fn(),
+        createUser: jest.fn(),
+      });
+      await userController({
+        userRepository: mockUserRepository,
+        authClient: mockAuthClient,
+        userService: mockUserService as unknown as typeof userService,
+      }).getUserById(req, res, mockNext);
+
+      expect(res.status).toHaveBeenCalledWith(STATUS_CODES.NOT_FOUND);
+      expect(res.json).toHaveBeenCalledWith({
+        message: USER_MESSAGES.USER_NOT_FOUND,
+      });
+    });
+
     it("should get user by ID successfully", async () => {
       const { req, res } = createMockReqRes({}, { id: "1" });
 
